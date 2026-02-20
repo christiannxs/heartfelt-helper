@@ -6,7 +6,7 @@ import CreateDemandDialog from "@/components/CreateDemandDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Music2, LayoutDashboard } from "lucide-react";
+import { LogOut, Disc3, LayoutDashboard } from "lucide-react";
 
 interface Demand {
   id: string;
@@ -75,18 +75,18 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
+      <header className="border-b border-primary/20 bg-accent sticky top-0 z-10">
         <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Music2 className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/30">
+              <Disc3 className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-none">PHD STUDIO DEMANDAS</h1>
+              <h1 className="text-lg font-black leading-none text-accent-foreground tracking-tight">PHD STUDIO <span className="text-primary">DEMANDAS</span></h1>
               <p className="text-xs text-muted-foreground">{roleLabel} · {displayName}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <Button variant="ghost" size="sm" className="text-accent-foreground hover:text-primary" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-1" /> Sair
           </Button>
         </div>
