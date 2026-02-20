@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Music2 } from "lucide-react";
+import { Disc3 } from "lucide-react";
 
 export default function Auth() {
   const { user, loading } = useAuth();
@@ -19,7 +19,7 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const { signIn, signUp } = useAuth();
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-accent"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
   if (user) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,14 +40,14 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Music2 className="h-6 w-6" />
+    <div className="flex min-h-screen items-center justify-center bg-accent p-4">
+      <Card className="w-full max-w-md border-primary/20 shadow-2xl">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30">
+            <Disc3 className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl">PHD STUDIO DEMANDAS</CardTitle>
-          <CardDescription>Gerenciamento de Demandas de Produção Musical</CardDescription>
+          <CardTitle className="text-2xl font-black tracking-tight">PHD STUDIO</CardTitle>
+          <CardDescription className="text-primary font-semibold text-sm">DEMANDAS</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login">
