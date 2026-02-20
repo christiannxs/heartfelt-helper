@@ -82,7 +82,7 @@ export default function Dashboard() {
               <Music2 className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-none">SoundFlow</h1>
+              <h1 className="text-lg font-bold leading-none">PHD STUDIO DEMANDAS</h1>
               <p className="text-xs text-muted-foreground">{roleLabel} · {displayName}</p>
             </div>
           </div>
