@@ -35,7 +35,7 @@ export default function Auth() {
       <Card className="w-full max-w-md border-primary/20 shadow-2xl">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-3 flex justify-center">
-            <img src="/logo.png" alt="Logo" className="h-16 w-auto object-contain" />
+            <img src="/minha-logo.png" alt="Logo" className="h-16 w-auto object-contain" />
           </div>
           <CardDescription className="text-primary font-semibold text-sm">DEMANDAS</CardDescription>
         </CardHeader>

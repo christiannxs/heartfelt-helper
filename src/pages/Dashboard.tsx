@@ -191,7 +191,7 @@ export default function Dashboard() {
       <header className="border-b border-primary/20 bg-accent sticky top-0 z-10">
         <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="h-9 w-auto object-contain" />
+            <img src="/minha-logo.png" alt="Logo" className="h-9 w-auto object-contain" />
             <div>
               <h1 className="text-lg font-black leading-none text-accent-foreground tracking-tight"><span className="text-primary">DEMANDAS</span></h1>
               <p className="text-xs text-muted-foreground">{roleLabel} · {displayName}</p>
