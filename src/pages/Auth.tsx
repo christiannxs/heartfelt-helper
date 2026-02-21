@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useSetupStatus } from "@/hooks/useSetupStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,27 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { toast } from "sonner";
 
 export default function Auth() {
-  const navigate = useNavigate();
   const { user, loading, signIn } = useAuth();
-  const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (setupStatus && !setupStatus.complete) {
-      navigate("/setup", { replace: true });
-    }
-  }, [setupStatus, navigate]);
-
-  if (loading || setupLoading || setupStatus === undefined) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-accent">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
-  if (!setupStatus.complete) return null;
   if (user) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {

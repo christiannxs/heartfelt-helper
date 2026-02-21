@@ -33,6 +33,11 @@ Este projeto usa **Supabase** como backend (PostgreSQL, autenticação e armazen
    - Crie a **conta do administrador** (nome, e-mail, senha).
    - Depois, faça login com o admin e use **Gerenciar usuários** no Dashboard para cadastrar atendentes, admins e produtores.
 
+6. **Deploy no Vercel (contas já existentes)**:
+   - Se você fez deploy e as contas já foram criadas em outro ambiente, a app pode ainda mostrar a tela de "Configuração inicial".
+   - Isso acontece porque o status do setup fica na tabela `app_config` do Supabase. No projeto Supabase que a Vercel usa, essa chave pode não existir.
+   - **Solução**: no Dashboard do Supabase (o mesmo projeto cuja URL/anon key estão nas variáveis de ambiente da Vercel), abra o **SQL Editor** e execute o conteúdo do arquivo `supabase/mark-setup-complete.sql`. Assim a app passa a redirecionar para login em vez do setup.
+
 ### O que o Supabase fornece
 
 - **Auth**: login/cadastro com e-mail e senha (Supabase Auth).
