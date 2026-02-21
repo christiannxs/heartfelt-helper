@@ -1,5 +1,52 @@
 # Welcome to your Lovable project
 
+## Banco de dados: Supabase
+
+Este projeto usa **Supabase** como backend (PostgreSQL, autenticação e armazenamento de arquivos).
+
+### Passo a passo para deixar o sistema funcional
+
+1. **Instalar dependências**:
+   ```sh
+   npm i
+   ```
+
+2. **Configurar o Supabase**:
+   - Crie um projeto em [Supabase](https://supabase.com).
+   - No dashboard: **Project Settings** → **API** → anote a **URL** e a chave **anon public**.
+   - Rode as migrações em `supabase/migrations/` (via Supabase CLI ou pelo SQL Editor no dashboard).
+
+3. **Variáveis de ambiente**:
+   - Crie um arquivo `.env` na raiz com:
+   ```env
+   VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=sua-chave-anon-public
+   ```
+
+4. **Subir o app**:
+   ```sh
+   npm run dev
+   ```
+
+5. **Primeiro uso (setup único)**:
+   - Na primeira vez você verá a tela de **Configuração inicial**.
+   - Crie a **conta do administrador** (nome, e-mail, senha).
+   - Depois, faça login com o admin e use **Gerenciar usuários** no Dashboard para cadastrar atendentes, admins e produtores.
+
+### O que o Supabase fornece
+
+- **Auth**: login/cadastro com e-mail e senha (Supabase Auth).
+- **Tabelas**: `profiles`, `user_roles`, `demands`, `demand_deliverables`, `app_config`.
+- **Storage**: bucket `demand-files` para upload/download de entregas (arquivos de áudio).
+
+### Comandos úteis
+
+| Comando | Descrição |
+|--------|-----------|
+| `npm run dev` | Sobe o frontend (Vite). |
+
+---
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
@@ -16,39 +63,7 @@ Changes made via Lovable will be committed automatically to this repo.
 
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+This project uses Supabase for database, auth and storage. Install dependencies and set `.env` as above, then run `npm run dev`.
 
 ## What technologies are used for this project?
 
@@ -57,17 +72,6 @@ This project is built with:
 - Vite
 - TypeScript
 - React
+- Supabase (PostgreSQL, Auth, Storage)
 - shadcn-ui
 - Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

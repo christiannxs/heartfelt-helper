@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       demands: {
         Row: {
           created_at: string
@@ -86,12 +101,46 @@ export type Database = {
         }
         Relationships: []
       }
+      demand_deliverables: {
+        Row: {
+          id: string
+          demand_id: string
+          storage_path: string | null
+          file_name: string | null
+          comments: string | null
+          uploaded_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          demand_id: string
+          storage_path?: string | null
+          file_name?: string | null
+          comments?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          demand_id?: string
+          storage_path?: string | null
+          file_name?: string | null
+          comments?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       get_producer_name: { Args: { _user_id: string }; Returns: string }
+      get_producers: { Args: Record<string, never>; Returns: { display_name: string }[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -99,9 +148,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      demands_uploadable_by_user: { Args: { _user_id: string }; Returns: string[] }
+      demands_downloadable_by_user: { Args: { _user_id: string }; Returns: string[] }
+      upsert_demand_deliverable: {
+        Args: {
+          p_demand_id: string
+          p_storage_path?: string | null
+          p_file_name?: string | null
+          p_comments?: string | null
+          p_uploaded_by?: string | null
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      app_role: "atendente" | "produtor" | "ceo"
+      app_role: "atendente" | "produtor" | "ceo" | "admin"
       demand_status: "aguardando" | "em_producao" | "concluido"
     }
     CompositeTypes: {
@@ -230,7 +291,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["atendente", "produtor", "ceo"],
+      app_role: ["atendente", "produtor", "ceo", "admin"],
       demand_status: ["aguardando", "em_producao", "concluido"],
     },
   },

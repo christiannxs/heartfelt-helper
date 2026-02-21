@@ -1,41 +1,42 @@
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSetupStatus } from "@/hooks/useSetupStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Disc3 } from "lucide-react";
 
 export default function Auth() {
-  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const { user, loading, signIn } = useAuth();
+  const { data: setupStatus, isLoading: setupLoading } = useSetupStatus();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupName, setSignupName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { signIn, signUp } = useAuth();
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-accent"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  useEffect(() => {
+    if (setupStatus && !setupStatus.complete) {
+      navigate("/setup", { replace: true });
+    }
+  }, [setupStatus, navigate]);
+
+  if (loading || setupLoading || setupStatus === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-accent">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+  if (!setupStatus.complete) return null;
   if (user) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     const { error } = await signIn(loginEmail, loginPassword);
-    if (error) toast.error(error.message);
-    setSubmitting(false);
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
-    if (error) toast.error(error.message);
-    else toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+    if (error) toast.error(error instanceof Error ? error.message : "E-mail ou senha incorretos.");
     setSubmitting(false);
   };
 
@@ -43,53 +44,25 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-accent p-4">
       <Card className="w-full max-w-md border-primary/20 shadow-2xl">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-            <Disc3 className="h-8 w-8" />
+          <div className="mx-auto mb-3 flex justify-center">
+            <img src="/logo.png" alt="Logo" className="h-16 w-auto object-contain" />
           </div>
-          <CardTitle className="text-2xl font-black tracking-tight">PHD STUDIO</CardTitle>
           <CardDescription className="text-primary font-semibold text-sm">DEMANDAS</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-mail</Label>
-                  <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
-                  <Input id="login-password" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
-                </div>
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Entrando..." : "Entrar"}
-                </Button>
-              </form>
-            </TabsContent>
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome</Label>
-                  <Input id="signup-name" value={signupName} onChange={(e) => setSignupName(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">E-mail</Label>
-                  <Input id="signup-email" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
-                  <Input id="signup-password" type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required minLength={6} />
-                </div>
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Criando..." : "Criar Conta"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleLogin} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-email">E-mail</Label>
+              <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Senha</Label>
+              <Input id="login-password" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

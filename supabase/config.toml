@@ -1,1 +1,5 @@
-project_id = "yzdniwxoiqewwqpxtbls"
+project_id = "tmkffdfcbwknrvoimjye"
+
+# A função create-user valida o JWT internamente; desativa verificação no gateway para evitar 401.
+[functions.create-user]
+verify_jwt = false

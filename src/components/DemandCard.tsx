@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Loader2, CheckCircle2, Play, Flag } from "lucide-react";
+import DemandDeliverySection, { type DeliverableRow } from "@/components/DemandDeliverySection";
 
 interface Demand {
   id: string;
@@ -15,7 +16,10 @@ interface Demand {
 interface DemandCardProps {
   demand: Demand;
   role: string | null;
+  deliverable?: DeliverableRow | null;
+  userId?: string;
   onUpdateStatus?: (id: string, newStatus: string) => void;
+  onRefresh?: () => void;
   updating?: boolean;
 }
 
@@ -37,7 +41,15 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
   },
 };
 
-export default function DemandCard({ demand, role, onUpdateStatus, updating }: DemandCardProps) {
+export default function DemandCard({
+  demand,
+  role,
+  deliverable = null,
+  userId = "",
+  onUpdateStatus,
+  onRefresh,
+  updating,
+}: DemandCardProps) {
   const config = statusConfig[demand.status] ?? statusConfig.aguardando;
 
   return (
@@ -74,6 +86,15 @@ export default function DemandCard({ demand, role, onUpdateStatus, updating }: D
               </Button>
             )}
           </div>
+        )}
+        {demand.status === "concluido" && onRefresh && (
+          <DemandDeliverySection
+            demandId={demand.id}
+            role={role}
+            deliverable={deliverable}
+            userId={userId}
+            onRefresh={onRefresh}
+          />
         )}
       </CardContent>
     </Card>

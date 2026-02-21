@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useProducers } from "@/hooks/useProducers";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Props {
@@ -15,7 +16,8 @@ interface Props {
 }
 
 export default function CreateDemandDialog({ onCreated }: Props) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const { data: producers = [] } = useProducers(role);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -26,21 +28,22 @@ export default function CreateDemandDialog({ onCreated }: Props) {
     e.preventDefault();
     if (!user) return;
     setSubmitting(true);
-    const { error } = await supabase.from("demands").insert({
-      name,
-      description: description || null,
-      producer_name: producer,
-      created_by: user.id,
-    });
-    if (error) {
-      toast.error("Erro ao criar demanda: " + error.message);
-    } else {
+    try {
+      const { error } = await supabase.from("demands").insert({
+        name,
+        description: description || null,
+        producer_name: producer,
+        created_by: user.id,
+      });
+      if (error) throw error;
       toast.success("Demanda criada com sucesso!");
       setName("");
       setDescription("");
       setProducer("");
       setOpen(false);
       onCreated();
+    } catch (err: unknown) {
+      toast.error("Erro ao criar demanda: " + (err instanceof Error ? err.message : "Erro desconhecido"));
     }
     setSubmitting(false);
   };
@@ -67,17 +70,18 @@ export default function CreateDemandDialog({ onCreated }: Props) {
           </div>
           <div className="space-y-2">
             <Label>Produtor</Label>
-            <Select value={producer} onValueChange={setProducer} required>
+            <Select value={producer} onValueChange={setProducer} required disabled={producers.length === 0}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o produtor" />
+                <SelectValue placeholder={producers.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Mhad">Mhad</SelectItem>
-                <SelectItem value="Felipe 1x">Felipe 1x</SelectItem>
+                {producers.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full" disabled={submitting || !producer}>
+          <Button type="submit" className="w-full" disabled={submitting || !producer || producers.length === 0}>
             {submitting ? "Criando..." : "Criar Demanda"}
           </Button>
         </form>
