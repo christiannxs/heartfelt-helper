@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DemandCard from "@/components/DemandCard";
 import CreateDemandDialog from "@/components/CreateDemandDialog";
+import EditDemandDialog from "@/components/EditDemandDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -63,9 +64,25 @@ export default function Dashboard() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
   });
 
+  const deleteDemandMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("demands").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["demands"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverables"] });
+      toast.success("Demanda apagada.");
+    },
+    onError: () => toast.error("Erro ao apagar demanda."),
+  });
+
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterProducer, setFilterProducer] = useState<string>("all");
+
+  const canEditOrDelete = role === "ceo" || role === "atendente" || role === "admin";
 
   if (authLoading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
   if (!user) return <Navigate to="/auth" replace />;
@@ -92,7 +109,12 @@ export default function Dashboard() {
   };
 
   const filtered = demands.filter((d) => {
-    if (filterStatus !== "all" && d.status !== filterStatus) return false;
+    if (filterStatus === "all") {
+      // Por padrão, esconder concluídas: mostrar só aguardando e em produção
+      if (d.status === "concluido") return false;
+    } else if (d.status !== filterStatus) {
+      return false;
+    }
     if (filterProducer !== "all" && d.producer_name !== filterProducer) return false;
     return true;
   });
@@ -106,21 +128,37 @@ export default function Dashboard() {
   const roleLabel = role === "atendente" ? "Atendente" : role === "produtor" ? "Produtor" : role === "admin" ? "Desenvolvedor" : "CEO";
   const loading = demandsLoading;
 
+  const handleStatusCardClick = (status: string) => {
+    setFilterStatus((prev) => (prev === status ? "all" : status));
+  };
+
   const demandsContent = (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border bg-card p-4 text-center">
+        <button
+          type="button"
+          onClick={() => handleStatusCardClick("aguardando")}
+          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "aguardando" ? "ring-2 ring-[hsl(var(--warning))] border-[hsl(var(--warning))]" : ""}`}
+        >
           <p className="text-2xl font-bold text-[hsl(var(--warning))]">{counts.aguardando}</p>
           <p className="text-xs text-muted-foreground">Aguardando</p>
-        </div>
-        <div className="rounded-xl border bg-card p-4 text-center">
+        </button>
+        <button
+          type="button"
+          onClick={() => handleStatusCardClick("em_producao")}
+          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "em_producao" ? "ring-2 ring-primary border-primary" : ""}`}
+        >
           <p className="text-2xl font-bold text-primary">{counts.em_producao}</p>
           <p className="text-xs text-muted-foreground">Em Produção</p>
-        </div>
-        <div className="rounded-xl border bg-card p-4 text-center">
+        </button>
+        <button
+          type="button"
+          onClick={() => handleStatusCardClick("concluido")}
+          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "concluido" ? "ring-2 ring-[hsl(var(--success))] border-[hsl(var(--success))]" : ""}`}
+        >
           <p className="text-2xl font-bold text-[hsl(var(--success))]">{counts.concluido}</p>
           <p className="text-xs text-muted-foreground">Concluído</p>
-        </div>
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -179,6 +217,10 @@ export default function Dashboard() {
               onUpdateStatus={handleUpdateStatus}
               onRefresh={refetch}
               updating={updatingId === d.id}
+              canEditOrDelete={canEditOrDelete}
+              onEdit={canEditOrDelete ? (demand) => setEditingDemand(demand) : undefined}
+              onDelete={canEditOrDelete ? (id) => deleteDemandMutation.mutate(id) : undefined}
+              deleting={deleteDemandMutation.isPending}
             />
           ))}
         </div>
@@ -227,10 +269,17 @@ export default function Dashboard() {
               <UserManagement expandedByDefault />
             </TabsContent>
           </Tabs>
-        ) : (
-          demandsContent
-        )}
-      </main>
-    </div>
-  );
+      ) : (
+        demandsContent
+      )}
+
+      <EditDemandDialog
+        demand={editingDemand}
+        open={!!editingDemand}
+        onOpenChange={(open) => !open && setEditingDemand(null)}
+        onUpdated={() => { refetch(); setEditingDemand(null); }}
+      />
+    </main>
+  </div>
+);
 }
