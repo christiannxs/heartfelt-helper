@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppRole } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Lista de produtores: tenta RPC get_producers; se falhar (ex.: migration não aplicada),
@@ -31,7 +32,7 @@ export async function fetchProducers(role: AppRole | null): Promise<string[]> {
 
 export function useProducers(role: AppRole | null) {
   return useQuery({
-    queryKey: ["producers", role],
+    queryKey: queryKeys.producers.all(role),
     queryFn: () => fetchProducers(role),
     enabled: role != null,
   });

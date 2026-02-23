@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { toast } from "sonner";
 
 export default function Auth() {
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, sendPasswordReset } = useAuth();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   if (loading) {
     return (
@@ -25,9 +28,33 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const { error } = await signIn(loginEmail, loginPassword);
-    if (error) toast.error(error instanceof Error ? error.message : "E-mail ou senha incorretos.");
+    const { error } = await signIn(loginEmail.trim(), loginPassword);
+    if (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const friendly = msg === "Invalid login credentials"
+        ? "E-mail ou senha incorretos. Confira os dados ou use «Esqueci minha senha»."
+        : msg;
+      toast.error(friendly);
+    }
     setSubmitting(false);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      toast.error("Informe o e-mail.");
+      return;
+    }
+    setResetting(true);
+    const { error } = await sendPasswordReset(resetEmail.trim());
+    if (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar link.");
+    } else {
+      toast.success("Se o e-mail existir, você receberá um link para redefinir a senha.");
+      setShowReset(false);
+      setResetEmail("");
+    }
+    setResetting(false);
   };
 
   return (
@@ -52,6 +79,35 @@ export default function Auth() {
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Entrando..." : "Entrar"}
             </Button>
+            {!showReset ? (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-primary underline pt-2 w-full text-center"
+                onClick={() => setShowReset(true)}
+              >
+                Esqueci minha senha
+              </button>
+            ) : (
+              <form onSubmit={handlePasswordReset} className="space-y-2 pt-2 border-t border-border">
+                <Label htmlFor="reset-email" className="text-xs">E-mail para redefinir senha</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="h-9"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={resetting}>
+                    {resetting ? "Enviando..." : "Enviar link"}
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setShowReset(false); setResetEmail(""); }}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            )}
           </form>
         </CardContent>
       </Card>

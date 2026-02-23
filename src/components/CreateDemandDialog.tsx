@@ -1,15 +1,36 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducers } from "@/hooks/useProducers";
 import { supabase } from "@/integrations/supabase/client";
+import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
+
+const createDemandSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
+  description: z.string().max(2000).optional().or(z.literal("")),
+  dueAt: z.string().optional().or(z.literal("")),
+  producer: z.string().min(1, "Selecione um produtor"),
+});
+
+type CreateDemandForm = z.infer<typeof createDemandSchema>;
 
 interface Props {
   onCreated: () => void;
@@ -19,36 +40,35 @@ export default function CreateDemandDialog({ onCreated }: Props) {
   const { user, role } = useAuth();
   const { data: producers = [] } = useProducers(role);
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [producer, setProducer] = useState("");
-  const [dueAt, setDueAt] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<CreateDemandForm>({
+    resolver: zodResolver(createDemandSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      dueAt: "",
+      producer: "",
+    },
+  });
+
+  const onSubmit = async (values: CreateDemandForm) => {
     if (!user) return;
-    setSubmitting(true);
     try {
       const { error } = await supabase.from("demands").insert({
-        name,
-        description: description || null,
-        producer_name: producer,
+        name: values.name.trim(),
+        description: values.description?.trim() || null,
+        producer_name: values.producer,
         created_by: user.id,
-        due_at: dueAt ? new Date(dueAt).toISOString() : null,
+        due_at: values.dueAt ? new Date(values.dueAt).toISOString() : null,
       });
       if (error) throw error;
       toast.success("Demanda criada com sucesso!");
-      setName("");
-      setDescription("");
-      setProducer("");
-      setDueAt("");
+      form.reset({ name: "", description: "", dueAt: "", producer: "" });
       setOpen(false);
       onCreated();
     } catch (err: unknown) {
-      toast.error("Erro ao criar demanda: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+      handleApiError(err, "Erro ao criar demanda.");
     }
-    setSubmitting(false);
   };
 
   return (
@@ -62,44 +82,88 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Criar Nova Demanda</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="demand-name">Nome da Demanda</Label>
-            <Input id="demand-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ex: Beat Trap para artista X" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="demand-desc">Descrição</Label>
-            <Textarea id="demand-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes sobre a demanda..." />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="demand-due">Prazo de entrega</Label>
-            <Input
-              id="demand-due"
-              type="datetime-local"
-              value={dueAt}
-              onChange={(e) => setDueAt(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome da Demanda</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Ex: Beat Trap para artista X" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            <p className="text-xs text-muted-foreground">Opcional. Define o limite para esta demanda ser entregue.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Produtor</Label>
-            <p className="text-xs text-muted-foreground">Consulte a disponibilidade dos produtores no topo da página para saber quando solicitar demandas.</p>
-            <Select value={producer} onValueChange={setProducer} required disabled={producers.length === 0}>
-              <SelectTrigger>
-                <SelectValue placeholder={producers.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />
-              </SelectTrigger>
-              <SelectContent>
-                {producers.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-full" disabled={submitting || !producer || producers.length === 0}>
-            {submitting ? "Criando..." : "Criar Demanda"}
-          </Button>
-        </form>
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Detalhes sobre a demanda..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dueAt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prazo de entrega</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      {...field}
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Opcional.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="producer"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Produtor</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={producers.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={producers.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {producers.map((name) => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Consulte a disponibilidade no topo da página.</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting || producers.length === 0}
+            >
+              {form.formState.isSubmitting ? "Criando..." : "Criar Demanda"}
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

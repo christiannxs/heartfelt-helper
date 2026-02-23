@@ -12,21 +12,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw } from "lucide-react";
-import DemandDeliverySection, { type DeliverableRow } from "@/components/DemandDeliverySection";
-
-interface Demand {
-  id: string;
-  name: string;
-  description: string | null;
-  producer_name: string;
-  status: string;
-  created_at: string;
-  due_at: string | null;
-}
+import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
+import DemandDeliverySection from "@/components/DemandDeliverySection";
+import type { DemandRow, DeliverableRow } from "@/types/demands";
+import { isDueSoon, isOverdue } from "@/lib/demands";
 
 interface DemandCardProps {
-  demand: Demand;
+  demand: DemandRow;
   role: string | null;
   deliverable?: DeliverableRow | null;
   userId?: string;
@@ -34,7 +26,7 @@ interface DemandCardProps {
   onRefresh?: () => void;
   updating?: boolean;
   canEditOrDelete?: boolean;
-  onEdit?: (demand: Demand) => void;
+  onEdit?: (demand: DemandRow) => void;
   onDelete?: (id: string) => void;
   deleting?: boolean;
 }
@@ -71,22 +63,24 @@ export default function DemandCard({
   deleting = false,
 }: DemandCardProps) {
   const config = statusConfig[demand.status] ?? statusConfig.aguardando;
+  const dueSoon = isDueSoon(demand.due_at, demand.status);
+  const overdue = isOverdue(demand.due_at, demand.status);
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className={`transition-shadow hover:shadow-md ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-snug">{demand.name}</CardTitle>
           <div className="flex items-center gap-1.5 shrink-0">
             {canEditOrDelete && onEdit && (
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(demand)} title="Editar">
+              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" onClick={() => onEdit(demand)} title="Editar">
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             )}
             {canEditOrDelete && onDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" disabled={deleting} title="Apagar">
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] text-destructive hover:text-destructive touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" disabled={deleting} title="Apagar">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </AlertDialogTrigger>
@@ -124,6 +118,12 @@ export default function DemandCard({
           <span>Criada: {new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
           {demand.due_at && (
             <span>Prazo: <strong className="text-foreground">{new Date(demand.due_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
+          )}
+          {(dueSoon || overdue) && (
+            <span className="inline-flex items-center gap-1 rounded bg-[hsl(var(--warning))]/20 px-1.5 py-0.5 text-[hsl(var(--warning))] font-medium">
+              <AlertTriangle className="h-3 w-3" />
+              {overdue ? "Atrasada" : "Prazo próximo"}
+            </span>
           )}
         </div>
         {role === "produtor" && (

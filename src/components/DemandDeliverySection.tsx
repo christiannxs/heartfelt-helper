@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Upload, Download, Loader2, MessageSquare } from "lucide-react";
+import type { DeliverableRow } from "@/types/demands";
 
 const BUCKET = "demand-files";
 const ACCEPT_AUDIO = "audio/*,.wav,.mp3,.mp4,.m4a,.aac,.ogg,.flac";
@@ -22,18 +23,6 @@ function safeStorageFileName(originalName: string): string {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "") || "audio";
   return safeBase + ext;
-}
-
-export interface DeliverableRow {
-  id: string;
-  demand_id: string;
-  storage_path?: string | null;
-  storage_id?: string | null;
-  file_name?: string | null;
-  comments?: string | null;
-  uploaded_by?: string | null;
-  created_at: string | number;
-  updated_at: string | number;
 }
 
 interface DemandDeliverySectionProps {

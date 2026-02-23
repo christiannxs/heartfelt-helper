@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { queryKeys } from "@/lib/query-keys";
 
 const SETUP_KEY = "setup_complete";
 
@@ -34,7 +35,7 @@ export async function setSetupComplete(): Promise<void> {
 
 export function useSetupStatus() {
   return useQuery({
-    queryKey: ["setupStatus"],
+    queryKey: queryKeys.setupStatus.all,
     queryFn: fetchSetupStatus,
     retry: 1,
     retryDelay: 2000,
@@ -45,6 +46,6 @@ export function useSetSetupComplete() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: setSetupComplete,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["setupStatus"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.setupStatus.all }),
   });
 }

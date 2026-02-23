@@ -7,13 +7,13 @@ export type AppRole = "atendente" | "produtor" | "ceo" | "admin";
 
 interface AuthContextType {
   user: { id: string } | null;
-  session: unknown;
   role: AppRole | null;
   displayName: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: unknown }>;
   signUpWithRole: (email: string, password: string, displayName: string, role: AppRole) => Promise<{ error: unknown }>;
   createUserAsAdmin: (email: string, password: string, displayName: string, role: AppRole) => Promise<{ error: unknown }>;
+  sendPasswordReset: (email: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<void>;
 }
 
@@ -169,17 +169,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const sendPasswordReset = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    return { error: error ?? null };
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        session: null,
         role,
         displayName,
         loading,
         signIn,
         signUpWithRole,
         createUserAsAdmin,
+        sendPasswordReset,
         signOut,
       }}
     >

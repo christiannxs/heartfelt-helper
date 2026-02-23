@@ -5,6 +5,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMyAvailability, type ProducerAvailabilityRow } from "@/hooks/useProducerAvailability";
+import { timeShort } from "@/lib/utils";
+import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
 import { CalendarDays, Sun, Moon, Clock, X } from "lucide-react";
 
@@ -13,10 +15,6 @@ const PRESETS = [
   { id: "tarde", label: "Tarde", start: "14:00:00", end: "18:00:00", icon: Moon },
   { id: "dia", label: "Dia todo", start: "08:00:00", end: "18:00:00", icon: Clock },
 ] as const;
-
-function timeShort(t: string): string {
-  return t ? t.slice(0, 5) : "";
-}
 
 function slotMatches(s: ProducerAvailabilityRow, start: string, end: string): boolean {
   const a = s.slot_start.slice(0, 5);
@@ -31,8 +29,9 @@ interface Props {
 }
 
 export default function ProducerAvailabilityCalendar({ userId }: Props) {
-  const { data: slots = [], isLoading, insertSlot, deleteSlot } = useMyAvailability(userId);
+  const { data: slots = [], isLoading, insertSlot, deleteSlot, isInserting, isDeleting } = useMyAvailability(userId);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const busy = isInserting || isDeleting;
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
   const slotsForSelected = selectedDate
@@ -55,7 +54,7 @@ export default function ProducerAvailabilityCalendar({ userId }: Props) {
       });
       toast.success("Adicionado!");
     } catch (e) {
-      toast.error("Erro ao salvar.");
+      handleApiError(e, "Erro ao salvar.");
     }
   };
 
@@ -63,8 +62,8 @@ export default function ProducerAvailabilityCalendar({ userId }: Props) {
     try {
       await deleteSlot(row.id);
       toast.success("Removido.");
-    } catch {
-      toast.error("Erro ao remover.");
+    } catch (e) {
+      handleApiError(e, "Erro ao remover.");
     }
   };
 
@@ -109,8 +108,10 @@ export default function ProducerAvailabilityCalendar({ userId }: Props) {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="gap-1.5"
+                      className="gap-1.5 min-h-[44px] touch-manipulation"
                       onClick={() => handlePreset(start, end)}
+                      disabled={busy}
+                      aria-busy={busy}
                     >
                       <Icon className="h-4 w-4" />
                       {label}
@@ -130,8 +131,10 @@ export default function ProducerAvailabilityCalendar({ userId }: Props) {
                           <button
                             type="button"
                             aria-label="Remover"
-                            className="rounded-full p-0.5 hover:bg-primary/30"
+                            className="rounded-full p-0.5 hover:bg-primary/30 disabled:opacity-50"
                             onClick={() => handleDelete(s)}
+                            disabled={busy}
+                            aria-busy={isDeleting}
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>

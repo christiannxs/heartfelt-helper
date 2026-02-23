@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { queryKeys } from "@/lib/query-keys";
 
 export type ProducerAvailabilityRow = Database["public"]["Tables"]["producer_availability"]["Row"];
 
@@ -18,7 +19,7 @@ export async function fetchMyAvailability(userId: string): Promise<ProducerAvail
 export function useMyAvailability(userId: string | undefined) {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ["producer-availability", userId],
+    queryKey: queryKeys.producerAvailability.all(userId),
     queryFn: () => fetchMyAvailability(userId!),
     enabled: !!userId,
   });
@@ -33,7 +34,7 @@ export function useMyAvailability(userId: string | undefined) {
       const { error } = await supabase.from("producer_availability").insert(row);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["producer-availability", userId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.producerAvailability.all(userId) }),
   });
 
   const deleteMutation = useMutation({
@@ -41,10 +42,16 @@ export function useMyAvailability(userId: string | undefined) {
       const { error } = await supabase.from("producer_availability").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["producer-availability", userId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.producerAvailability.all(userId) }),
   });
 
-  return { ...query, insertSlot: insertMutation.mutateAsync, deleteSlot: deleteMutation.mutateAsync };
+  return {
+    ...query,
+    insertSlot: insertMutation.mutateAsync,
+    deleteSlot: deleteMutation.mutateAsync,
+    isInserting: insertMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+  };
 }
 
 export type AvailabilityForViewRow = {
@@ -62,7 +69,7 @@ export async function fetchProducerAvailabilityForView(): Promise<AvailabilityFo
 
 export function useProducerAvailabilityForView(enabled: boolean) {
   return useQuery({
-    queryKey: ["producer-availability-view"],
+    queryKey: queryKeys.producerAvailability.view,
     queryFn: fetchProducerAvailabilityForView,
     enabled,
   });

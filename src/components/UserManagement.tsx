@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Users, ChevronDown, ChevronUp } from "lucide-react";
 import type { AppRole } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/query-keys";
 
 const ROLE_LABELS: Record<AppRole, string> = {
   atendente: "Atendente",
@@ -58,7 +59,7 @@ export default function UserManagement({ expandedByDefault = false }: UserManage
   const [submitting, setSubmitting] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ["users"],
+    queryKey: queryKeys.users.all,
     queryFn: fetchUsers,
     enabled: expanded,
   });
@@ -75,7 +76,7 @@ export default function UserManagement({ expandedByDefault = false }: UserManage
       setPassword("");
       setName("");
       setRole("atendente");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
       queryClient.invalidateQueries({ queryKey: ["producers"] });
     }
     setSubmitting(false);

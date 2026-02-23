@@ -5,12 +5,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProducerAvailabilityForView, type AvailabilityForViewRow } from "@/hooks/useProducerAvailability";
+import { timeShort } from "@/lib/utils";
 import { CalendarCheck } from "lucide-react";
-
-function timeShort(t: string): string {
-  if (!t) return "";
-  return t.slice(0, 5);
-}
 
 export default function ProducerAvailabilityView() {
   const { data: rows = [], isLoading } = useProducerAvailabilityForView(true);

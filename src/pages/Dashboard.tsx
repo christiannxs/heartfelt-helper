@@ -1,126 +1,89 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import DemandCard from "@/components/DemandCard";
-import CreateDemandDialog from "@/components/CreateDemandDialog";
+import { useProducers } from "@/hooks/useProducers";
+import { useDemands } from "@/hooks/useDemands";
 import EditDemandDialog from "@/components/EditDemandDialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
-import { LogOut, LayoutDashboard, UserPlus } from "lucide-react";
+import { LogOut, LayoutDashboard, UserPlus, AlertTriangle } from "lucide-react";
 import UserManagement from "@/components/UserManagement";
-import { useProducers } from "@/hooks/useProducers";
 import ProducerAvailabilityCalendar from "@/components/ProducerAvailabilityCalendar";
 import ProducerAvailabilityView from "@/components/ProducerAvailabilityView";
-
-interface Demand {
-  id: string;
-  name: string;
-  description: string | null;
-  producer_name: string;
-  status: string;
-  created_at: string;
-  due_at: string | null;
-}
-
-export interface DeliverableRow {
-  id: string;
-  demand_id: string;
-  storage_path?: string | null;
-  file_name?: string | null;
-  comments?: string | null;
-  uploaded_by?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-async function fetchDemands() {
-  const { data, error } = await supabase
-    .from("demands")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Demand[];
-}
-
-async function fetchDeliverables(): Promise<DeliverableRow[]> {
-  const { data, error } = await supabase.from("demand_deliverables").select("*");
-  if (error) throw error;
-  return (data ?? []) as DeliverableRow[];
-}
+import DemandStatsCards from "@/components/dashboard/DemandStatsCards";
+import DemandFilters from "@/components/dashboard/DemandFilters";
+import DemandList from "@/components/dashboard/DemandList";
+import type { DemandRow } from "@/types/demands";
+import { getPeriodStart, countDueSoon } from "@/lib/demands";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 
 export default function Dashboard() {
-  const queryClient = useQueryClient();
   const { user, loading: authLoading, role, displayName, signOut } = useAuth();
-  const { data: demands = [], isLoading: demandsLoading } = useQuery({ queryKey: ["demands"], queryFn: fetchDemands });
-  const { data: deliverablesList = [] } = useQuery({ queryKey: ["deliverables"], queryFn: fetchDeliverables });
   const { data: producers = [] } = useProducers(role);
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "aguardando" | "em_producao" | "concluido" }) => {
-      const { error } = await supabase.from("demands").update({ status }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
-  });
-
-  const deleteDemandMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("demands").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["demands"] });
-      queryClient.invalidateQueries({ queryKey: ["deliverables"] });
-      toast.success("Demanda apagada.");
-    },
-    onError: () => toast.error("Erro ao apagar demanda."),
-  });
+  const queryClient = useQueryClient();
+  const {
+    demands,
+    deliverables,
+    isLoading: demandsLoading,
+    refetch,
+    updateStatusMutation,
+    deleteDemandMutation,
+  } = useDemands();
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
+  const [editingDemand, setEditingDemand] = useState<DemandRow | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterProducer, setFilterProducer] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const lastUpdatedByUsRef = useRef<Map<string, number>>(new Map());
 
   const canEditOrDelete = role === "ceo" || role === "atendente" || role === "admin";
+
+  // Notificações in-app: Realtime em demandas
+  useEffect(() => {
+    const channel = supabase
+      .channel("demands-changes")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "demands" },
+        (payload) => {
+          const newRow = payload.new as DemandRow;
+          const id = newRow?.id;
+          if (!id) return;
+          const now = Date.now();
+          if (lastUpdatedByUsRef.current.get(id) && now - lastUpdatedByUsRef.current.get(id)! < 2500) return;
+          queryClient.invalidateQueries({ queryKey: queryKeys.demands.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.deliverables.all });
+          const statusLabel = newRow.status === "concluido" ? "Concluída" : newRow.status === "em_producao" ? "Em produção" : "Aguardando";
+          toast.info(`Demanda atualizada: ${newRow.name} → ${statusLabel}`);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   if (authLoading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
   if (!user) return <Navigate to="/auth" replace />;
 
-  const deliverables: DeliverableRow[] = deliverablesList;
-
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
-    setUpdatingId(id);
-    try {
-      await updateStatusMutation.mutateAsync({
-        id,
-        status: newStatus as "aguardando" | "em_producao" | "concluido",
-      });
-      toast.success("Status atualizado!");
-    } catch {
-      toast.error("Erro ao atualizar status");
-    }
-    setUpdatingId(null);
-  };
-
-  const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: ["demands"] });
-    queryClient.invalidateQueries({ queryKey: ["deliverables"] });
-  };
-
+  const periodStart = getPeriodStart(dateFilter);
   const filtered = demands.filter((d) => {
     if (filterStatus === "all") {
-      // Por padrão, esconder concluídas: mostrar só aguardando e em produção
       if (d.status === "concluido") return false;
     } else if (d.status !== filterStatus) {
       return false;
     }
     if (filterProducer !== "all" && d.producer_name !== filterProducer) return false;
+    if (periodStart && new Date(d.created_at) < periodStart) return false;
     return true;
   });
+
+  const dueSoonCount = countDueSoon(demands);
 
   const counts = {
     aguardando: demands.filter((d) => d.status === "aguardando").length,
@@ -129,10 +92,24 @@ export default function Dashboard() {
   };
 
   const roleLabel = role === "atendente" ? "Atendente" : role === "produtor" ? "Produtor" : role === "admin" ? "Desenvolvedor" : "CEO";
-  const loading = demandsLoading;
 
   const handleStatusCardClick = (status: string) => {
     setFilterStatus((prev) => (prev === status ? "all" : status));
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: string) => {
+    lastUpdatedByUsRef.current.set(id, Date.now());
+    setUpdatingId(id);
+    try {
+      await updateStatusMutation.mutateAsync({
+        id,
+        status: newStatus as "aguardando" | "em_producao" | "concluido",
+      });
+      toast.success("Status atualizado!");
+    } catch (e) {
+      handleApiError(e, "Erro ao atualizar status");
+    }
+    setUpdatingId(null);
   };
 
   const availabilitySection =
@@ -145,70 +122,30 @@ export default function Dashboard() {
   const demandsContent = (
     <div className="space-y-6">
       {availabilitySection && <section className="space-y-4">{availabilitySection}</section>}
-      <div className="grid grid-cols-3 gap-4">
-        <button
-          type="button"
-          onClick={() => handleStatusCardClick("aguardando")}
-          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "aguardando" ? "ring-2 ring-[hsl(var(--warning))] border-[hsl(var(--warning))]" : ""}`}
-        >
-          <p className="text-2xl font-bold text-[hsl(var(--warning))]">{counts.aguardando}</p>
-          <p className="text-xs text-muted-foreground">Aguardando</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleStatusCardClick("em_producao")}
-          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "em_producao" ? "ring-2 ring-primary border-primary" : ""}`}
-        >
-          <p className="text-2xl font-bold text-primary">{counts.em_producao}</p>
-          <p className="text-xs text-muted-foreground">Em Produção</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleStatusCardClick("concluido")}
-          className={`rounded-xl border bg-card p-4 text-center transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${filterStatus === "concluido" ? "ring-2 ring-[hsl(var(--success))] border-[hsl(var(--success))]" : ""}`}
-        >
-          <p className="text-2xl font-bold text-[hsl(var(--success))]">{counts.concluido}</p>
-          <p className="text-xs text-muted-foreground">Concluído</p>
-        </button>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Demandas</h2>
+      {dueSoonCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-4 py-3 text-sm text-[hsl(var(--warning))]">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <span>{dueSoonCount} {dueSoonCount === 1 ? "demanda com prazo" : "demandas com prazo"} nos próximos 2 dias.</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {(role === "ceo" || role === "atendente" || role === "admin") && (
-            <>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="aguardando">Aguardando</SelectItem>
-                  <SelectItem value="em_producao">Em Produção</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterProducer} onValueChange={setFilterProducer}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Produtor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Produtores</SelectItem>
-                  {producers.map((name) => (
-                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-          {(role === "atendente" || role === "admin" || role === "ceo") && <CreateDemandDialog onCreated={refetch} />}
-        </div>
-      </div>
-
-      {loading ? (
+      )}
+      <DemandStatsCards
+        counts={counts}
+        filterStatus={filterStatus}
+        onStatusCardClick={handleStatusCardClick}
+      />
+      <DemandFilters
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        filterProducer={filterProducer}
+        setFilterProducer={setFilterProducer}
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        producers={producers}
+        showFilters={canEditOrDelete}
+        showCreateButton={role === "atendente" || role === "admin" || role === "ceo"}
+        onCreated={refetch}
+      />
+      {demandsLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -217,24 +154,20 @@ export default function Dashboard() {
           <p>Nenhuma demanda encontrada.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((d) => (
-            <DemandCard
-              key={d.id}
-              demand={{ ...d, created_at: d.created_at }}
-              role={role!}
-              deliverable={deliverables.find((x) => x.demand_id === d.id) ?? null}
-              userId={user?.id ?? ""}
-              onUpdateStatus={handleUpdateStatus}
-              onRefresh={refetch}
-              updating={updatingId === d.id}
-              canEditOrDelete={canEditOrDelete}
-              onEdit={canEditOrDelete ? (demand) => setEditingDemand(demand) : undefined}
-              onDelete={canEditOrDelete ? (id) => deleteDemandMutation.mutate(id) : undefined}
-              deleting={deleteDemandMutation.isPending}
-            />
-          ))}
-        </div>
+        <DemandList
+          filtered={filtered}
+          deliverables={deliverables}
+          role={role}
+          userId={user.id}
+          updatingId={updatingId}
+          onUpdateStatus={handleUpdateStatus}
+          onRefresh={refetch}
+          canEditOrDelete={canEditOrDelete}
+          onEdit={setEditingDemand}
+          onDelete={(id) => deleteDemandMutation.mutate(id)}
+          updateStatusMutation={updateStatusMutation}
+          deleteDemandMutation={deleteDemandMutation}
+        />
       )}
     </div>
   );
@@ -242,15 +175,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-primary/20 bg-accent sticky top-0 z-10">
-        <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <img src="/minha-logo.png" alt="Logo" className="h-9 w-auto object-contain" />
-            <div>
-              <h1 className="text-lg font-black leading-none text-accent-foreground tracking-tight"><span className="text-primary">DEMANDAS</span></h1>
-              <p className="text-xs text-muted-foreground">{roleLabel} · {displayName}</p>
+        <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/minha-logo.png" alt="Logo" className="h-8 sm:h-9 w-auto object-contain shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-black leading-none text-accent-foreground tracking-tight truncate"><span className="text-primary">DEMANDAS</span></h1>
+              <p className="text-xs text-muted-foreground truncate">{roleLabel} · {displayName}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="text-accent-foreground hover:text-primary" onClick={signOut}>
+          <Button variant="ghost" size="sm" className="min-h-[44px] touch-manipulation shrink-0 text-accent-foreground hover:text-primary" onClick={signOut}>
             <LogOut className="h-4 w-4 mr-1" /> Sair
           </Button>
         </div>
@@ -280,17 +213,17 @@ export default function Dashboard() {
               <UserManagement expandedByDefault />
             </TabsContent>
           </Tabs>
-      ) : (
-        demandsContent
-      )}
+        ) : (
+          demandsContent
+        )}
 
-      <EditDemandDialog
-        demand={editingDemand}
-        open={!!editingDemand}
-        onOpenChange={(open) => !open && setEditingDemand(null)}
-        onUpdated={() => { refetch(); setEditingDemand(null); }}
-      />
-    </main>
-  </div>
-);
+        <EditDemandDialog
+          demand={editingDemand}
+          open={!!editingDemand}
+          onOpenChange={(open) => !open && setEditingDemand(null)}
+          onUpdated={() => { refetch(); setEditingDemand(null); }}
+        />
+      </main>
+    </div>
+  );
 }
