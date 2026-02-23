@@ -22,6 +22,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [producer, setProducer] = useState("");
+  const [dueAt, setDueAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,12 +35,14 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         description: description || null,
         producer_name: producer,
         created_by: user.id,
+        due_at: dueAt ? new Date(dueAt).toISOString() : null,
       });
       if (error) throw error;
       toast.success("Demanda criada com sucesso!");
       setName("");
       setDescription("");
       setProducer("");
+      setDueAt("");
       setOpen(false);
       onCreated();
     } catch (err: unknown) {
@@ -69,7 +72,19 @@ export default function CreateDemandDialog({ onCreated }: Props) {
             <Textarea id="demand-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalhes sobre a demanda..." />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="demand-due">Prazo de entrega</Label>
+            <Input
+              id="demand-due"
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+            />
+            <p className="text-xs text-muted-foreground">Opcional. Define o limite para esta demanda ser entregue.</p>
+          </div>
+          <div className="space-y-2">
             <Label>Produtor</Label>
+            <p className="text-xs text-muted-foreground">Consulte a disponibilidade dos produtores no topo da página para saber quando solicitar demandas.</p>
             <Select value={producer} onValueChange={setProducer} required disabled={producers.length === 0}>
               <SelectTrigger>
                 <SelectValue placeholder={producers.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />

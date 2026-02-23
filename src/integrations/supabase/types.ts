@@ -34,6 +34,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          due_at: string | null
           id: string
           name: string
           producer_name: string
@@ -44,6 +45,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          due_at?: string | null
           id?: string
           name: string
           producer_name: string
@@ -54,6 +56,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          due_at?: string | null
           id?: string
           name?: string
           producer_name?: string
@@ -134,6 +137,33 @@ export type Database = {
         }
         Relationships: []
       }
+      producer_availability: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          slot_start: string
+          slot_end: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          slot_start: string
+          slot_end: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          slot_start?: string
+          slot_end?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -159,6 +189,10 @@ export type Database = {
           p_uploaded_by?: string | null
         }
         Returns: undefined
+      }
+      get_producer_availability_for_view: {
+        Args: Record<string, never>
+        Returns: { producer_name: string; date: string; slot_start: string; slot_end: string }[]
       }
     }
     Enums: {

@@ -16,6 +16,7 @@ export interface DemandForEdit {
   description: string | null;
   producer_name: string;
   status: string;
+  due_at: string | null;
 }
 
 interface Props {
@@ -32,6 +33,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
   const [description, setDescription] = useState("");
   const [producer, setProducer] = useState("");
   const [status, setStatus] = useState<string>("aguardando");
+  const [dueAt, setDueAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,13 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
       setDescription(demand.description ?? "");
       setProducer(demand.producer_name);
       setStatus(demand.status);
+      if (demand.due_at) {
+        const d = new Date(demand.due_at);
+        const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate(), h = d.getHours(), min = d.getMinutes();
+        setDueAt(`${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}T${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
+      } else {
+        setDueAt("");
+      }
     }
   }, [demand]);
 
@@ -55,6 +64,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
           description: description || null,
           producer_name: producer,
           status: status as "aguardando" | "em_producao" | "concluido",
+          due_at: dueAt ? new Date(dueAt).toISOString() : null,
         })
         .eq("id", demand.id);
       if (error) throw error;
@@ -92,6 +102,15 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Detalhes sobre a demanda..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-demand-due">Prazo de entrega</Label>
+              <Input
+                id="edit-demand-due"
+                type="datetime-local"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.target.value)}
               />
             </div>
             <div className="space-y-2">

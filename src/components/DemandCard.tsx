@@ -22,6 +22,7 @@ interface Demand {
   producer_name: string;
   status: string;
   created_at: string;
+  due_at: string | null;
 }
 
 interface DemandCardProps {
@@ -118,9 +119,12 @@ export default function DemandCard({
         {demand.description && (
           <p className="text-sm text-muted-foreground line-clamp-2">{demand.description}</p>
         )}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span>Produtor: <strong className="text-foreground">{demand.producer_name}</strong></span>
-          <span>{new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
+          <span>Criada: {new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
+          {demand.due_at && (
+            <span>Prazo: <strong className="text-foreground">{new Date(demand.due_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
+          )}
         </div>
         {role === "produtor" && (
           <div className="flex gap-2 pt-1">

@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { LogOut, LayoutDashboard, UserPlus } from "lucide-react";
 import UserManagement from "@/components/UserManagement";
 import { useProducers } from "@/hooks/useProducers";
+import ProducerAvailabilityCalendar from "@/components/ProducerAvailabilityCalendar";
+import ProducerAvailabilityView from "@/components/ProducerAvailabilityView";
 
 interface Demand {
   id: string;
@@ -21,6 +23,7 @@ interface Demand {
   producer_name: string;
   status: string;
   created_at: string;
+  due_at: string | null;
 }
 
 export interface DeliverableRow {
@@ -132,8 +135,16 @@ export default function Dashboard() {
     setFilterStatus((prev) => (prev === status ? "all" : status));
   };
 
+  const availabilitySection =
+    role === "produtor" && user ? (
+      <ProducerAvailabilityCalendar userId={user.id} />
+    ) : (role === "ceo" || role === "atendente" || role === "admin") ? (
+      <ProducerAvailabilityView />
+    ) : null;
+
   const demandsContent = (
     <div className="space-y-6">
+      {availabilitySection && <section className="space-y-4">{availabilitySection}</section>}
       <div className="grid grid-cols-3 gap-4">
         <button
           type="button"
