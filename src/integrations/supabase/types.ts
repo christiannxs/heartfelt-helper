@@ -31,6 +31,7 @@ export type Database = {
       }
       demands: {
         Row: {
+          artist_name: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -42,6 +43,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          artist_name?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -53,6 +55,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          artist_name?: string | null
           created_at?: string
           created_by?: string
           description?: string | null

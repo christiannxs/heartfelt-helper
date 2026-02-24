@@ -22,8 +22,10 @@ import { useProducers } from "@/hooks/useProducers";
 import { supabase } from "@/integrations/supabase/client";
 import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
+import { ARTISTS } from "@/lib/artists";
 
 const createDemandSchema = z.object({
+  artist: z.string().optional().or(z.literal("")),
   name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
   description: z.string().max(2000).optional().or(z.literal("")),
   dueAt: z.string().optional().or(z.literal("")),
@@ -44,6 +46,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
   const form = useForm<CreateDemandForm>({
     resolver: zodResolver(createDemandSchema),
     defaultValues: {
+      artist: "",
       name: "",
       description: "",
       dueAt: "",
@@ -55,6 +58,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
     if (!user) return;
     try {
       const { error } = await supabase.from("demands").insert({
+        artist_name: values.artist?.trim() || null,
         name: values.name.trim(),
         description: values.description?.trim() || null,
         producer_name: values.producer,
@@ -63,7 +67,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
       });
       if (error) throw error;
       toast.success("Demanda criada com sucesso!");
-      form.reset({ name: "", description: "", dueAt: "", producer: "" });
+      form.reset({ artist: "", name: "", description: "", dueAt: "", producer: "" });
       setOpen(false);
       onCreated();
     } catch (err: unknown) {
@@ -84,6 +88,31 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="artist"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Artista</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o artista" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ARTISTS.map((name) => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="name"

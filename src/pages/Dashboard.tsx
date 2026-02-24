@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
-import { LogOut, LayoutDashboard, UserPlus, AlertTriangle } from "lucide-react";
+import { LogOut, LayoutDashboard, UserPlus, AlertTriangle, FileBarChart } from "lucide-react";
 import UserManagement from "@/components/UserManagement";
 import ProducerAvailabilityCalendar from "@/components/ProducerAvailabilityCalendar";
 import ProducerAvailabilityView from "@/components/ProducerAvailabilityView";
 import DemandStatsCards from "@/components/dashboard/DemandStatsCards";
 import DemandFilters from "@/components/dashboard/DemandFilters";
 import DemandList from "@/components/dashboard/DemandList";
+import ArtistReportView from "@/components/dashboard/ArtistReportView";
 import type { DemandRow } from "@/types/demands";
 import { getPeriodStart, countDueSoon } from "@/lib/demands";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +85,12 @@ export default function Dashboard() {
   });
 
   const dueSoonCount = countDueSoon(demands);
+
+  /** No relatório por artista: admin/ceo/atendente veem todas; produtor só as suas. */
+  const demandsForReport =
+    role === "produtor" && displayName != null
+      ? demands.filter((d) => d.producer_name === displayName)
+      : demands;
 
   const counts = {
     aguardando: demands.filter((d) => d.status === "aguardando").length,
@@ -193,10 +200,14 @@ export default function Dashboard() {
         {role === "admin" ? (
           <Tabs defaultValue="demandas" className="space-y-6">
             <div className="flex items-center justify-between">
-              <TabsList className="h-11">
+              <TabsList className="h-11 flex-wrap">
                 <TabsTrigger value="demandas" className="gap-2 px-4">
                   <LayoutDashboard className="h-4 w-4" />
                   Demandas
+                </TabsTrigger>
+                <TabsTrigger value="relatorio" className="gap-2 px-4">
+                  <FileBarChart className="h-4 w-4" />
+                  Relatório
                 </TabsTrigger>
                 <TabsTrigger value="gerenciar-usuarios" className="gap-2 px-4">
                   <UserPlus className="h-4 w-4" />
@@ -209,8 +220,61 @@ export default function Dashboard() {
               {demandsContent}
             </TabsContent>
 
+            <TabsContent value="relatorio" className="mt-0">
+              <ArtistReportView
+                demands={demandsForReport}
+                deliverables={deliverables}
+                role={role}
+                userId={user.id}
+                updatingId={updatingId}
+                onUpdateStatus={handleUpdateStatus}
+                onRefresh={refetch}
+                canEditOrDelete={canEditOrDelete}
+                onEdit={setEditingDemand}
+                onDelete={(id) => deleteDemandMutation.mutate(id)}
+                updateStatusMutation={updateStatusMutation}
+                deleteDemandMutation={deleteDemandMutation}
+              />
+            </TabsContent>
+
             <TabsContent value="gerenciar-usuarios" className="mt-0">
               <UserManagement expandedByDefault />
+            </TabsContent>
+          </Tabs>
+        ) : (role === "ceo" || role === "atendente" || role === "produtor") ? (
+          <Tabs defaultValue="demandas" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <TabsList className="h-11">
+                <TabsTrigger value="demandas" className="gap-2 px-4">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Demandas
+                </TabsTrigger>
+                <TabsTrigger value="relatorio" className="gap-2 px-4">
+                  <FileBarChart className="h-4 w-4" />
+                  Relatório
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="demandas" className="space-y-6 mt-0">
+              {demandsContent}
+            </TabsContent>
+
+            <TabsContent value="relatorio" className="mt-0">
+              <ArtistReportView
+                demands={demandsForReport}
+                deliverables={deliverables}
+                role={role}
+                userId={user.id}
+                updatingId={updatingId}
+                onUpdateStatus={handleUpdateStatus}
+                onRefresh={refetch}
+                canEditOrDelete={canEditOrDelete}
+                onEdit={setEditingDemand}
+                onDelete={(id) => deleteDemandMutation.mutate(id)}
+                updateStatusMutation={updateStatusMutation}
+                deleteDemandMutation={deleteDemandMutation}
+              />
             </TabsContent>
           </Tabs>
         ) : (

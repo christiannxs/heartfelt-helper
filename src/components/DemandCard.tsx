@@ -70,7 +70,12 @@ export default function DemandCard({
     <Card className={`transition-shadow hover:shadow-md ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base leading-snug">{demand.name}</CardTitle>
+          <div className="min-w-0 space-y-0.5">
+            {demand.artist_name && (
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{demand.artist_name}</p>
+            )}
+            <CardTitle className="text-base leading-snug">{demand.name}</CardTitle>
+          </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {canEditOrDelete && onEdit && (
               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" onClick={() => onEdit(demand)} title="Editar">

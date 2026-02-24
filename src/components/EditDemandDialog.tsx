@@ -9,9 +9,11 @@ import { useProducers } from "@/hooks/useProducers";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ARTISTS } from "@/lib/artists";
 
 export interface DemandForEdit {
   id: string;
+  artist_name: string | null;
   name: string;
   description: string | null;
   producer_name: string;
@@ -29,6 +31,7 @@ interface Props {
 export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated }: Props) {
   const { role } = useAuth();
   const { data: producers = [] } = useProducers(role);
+  const [artist, setArtist] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [producer, setProducer] = useState("");
@@ -38,6 +41,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
 
   useEffect(() => {
     if (demand) {
+      setArtist(demand.artist_name ?? "");
       setName(demand.name);
       setDescription(demand.description ?? "");
       setProducer(demand.producer_name);
@@ -60,6 +64,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
       const { error } = await supabase
         .from("demands")
         .update({
+          artist_name: artist?.trim() || null,
           name,
           description: description || null,
           producer_name: producer,
@@ -85,6 +90,19 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
         </DialogHeader>
         {demand && (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Artista</Label>
+              <Select value={artist} onValueChange={setArtist}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o artista" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ARTISTS.map((n) => (
+                    <SelectItem key={n} value={n}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-demand-name">Nome da Demanda</Label>
               <Input
