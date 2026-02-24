@@ -12,7 +12,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw, AlertTriangle, Eye } from "lucide-react";
 import DemandDeliverySection from "@/components/DemandDeliverySection";
 import type { DemandRow, DeliverableRow } from "@/types/demands";
 import { isDueSoon, isOverdue } from "@/lib/demands";
@@ -77,6 +84,44 @@ export default function DemandCard({
             <CardTitle className="text-base leading-snug">{demand.name}</CardTitle>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" title="Abrir">
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  {demand.artist_name && (
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{demand.artist_name}</p>
+                  )}
+                  <DialogTitle className="text-lg pr-8">{demand.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  {demand.description && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Descrição</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{demand.description}</p>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground border-t pt-4">
+                    <span>Produtor: <strong className="text-foreground">{demand.producer_name}</strong></span>
+                    <span>Criada: {new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
+                    {demand.due_at && (
+                      <span>Prazo: <strong className="text-foreground">{new Date(demand.due_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>
+                    )}
+                  </div>
+                  <div className="pt-2">
+                    <Badge className={config.className}>
+                      <span className="flex items-center gap-1">
+                        {config.icon}
+                        {config.label}
+                      </span>
+                    </Badge>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             {canEditOrDelete && onEdit && (
               <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" onClick={() => onEdit(demand)} title="Editar">
                 <Pencil className="h-3.5 w-3.5" />
