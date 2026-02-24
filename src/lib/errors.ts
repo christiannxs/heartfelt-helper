@@ -13,9 +13,14 @@ export function getErrorMessage(err: unknown): string {
 
 /**
  * Loga o erro no console e mostra toast de erro. Útil em catch de mutations.
+ * Se toastMessage for passado, usa como título e mostra a mensagem real como descrição.
  */
 export function handleApiError(err: unknown, toastMessage?: string): void {
   const message = getErrorMessage(err);
   console.error("[API Error]", err);
-  toast.error(toastMessage ?? message);
+  if (toastMessage) {
+    toast.error(toastMessage, { description: message });
+  } else {
+    toast.error(message);
+  }
 }
