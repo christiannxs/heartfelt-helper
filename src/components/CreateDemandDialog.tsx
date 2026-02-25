@@ -72,6 +72,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         name: values.name.trim(),
         description: values.description?.trim() || null,
         producer_name: values.producer.trim(),
+        solicitante_name: displayName?.trim() || null,
         created_by: user.id,
         due_at: values.dueAt ? new Date(values.dueAt).toISOString() : null,
       });

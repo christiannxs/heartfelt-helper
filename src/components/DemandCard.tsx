@@ -105,6 +105,9 @@ export default function DemandCard({
                     </div>
                   )}
                   <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground border-t pt-4">
+                    {demand.solicitante_name && (
+                      <span>Solicitante: <strong className="text-foreground">{demand.solicitante_name}</strong></span>
+                    )}
                     <span>Produtor: <strong className="text-foreground">{demand.producer_name}</strong></span>
                     <span>Criada: {new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
                     {demand.due_at && (
@@ -164,6 +167,9 @@ export default function DemandCard({
           <p className="text-sm text-muted-foreground line-clamp-2">{demand.description}</p>
         )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {demand.solicitante_name && (
+            <span>Solicitante: <strong className="text-foreground">{demand.solicitante_name}</strong></span>
+          )}
           <span>Produtor: <strong className="text-foreground">{demand.producer_name}</strong></span>
           <span>Criada: {new Date(demand.created_at).toLocaleDateString("pt-BR")}</span>
           {demand.due_at && (
