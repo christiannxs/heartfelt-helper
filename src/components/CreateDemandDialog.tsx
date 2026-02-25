@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,9 +39,13 @@ interface Props {
 }
 
 export default function CreateDemandDialog({ onCreated }: Props) {
-  const { user, role } = useAuth();
+  const { user, role, displayName } = useAuth();
   const { data: producers = [] } = useProducers(role);
   const [open, setOpen] = useState(false);
+
+  const isProducer = role === "produtor";
+  const producerOptions = isProducer && displayName ? [displayName] : producers;
+  const producerDisabled = isProducer;
 
   const form = useForm<CreateDemandForm>({
     resolver: zodResolver(createDemandSchema),
@@ -54,6 +58,12 @@ export default function CreateDemandDialog({ onCreated }: Props) {
     },
   });
 
+  useEffect(() => {
+    if (open && isProducer && displayName) {
+      form.setValue("producer", displayName);
+    }
+  }, [open, isProducer, displayName, form]);
+
   const onSubmit = async (values: CreateDemandForm) => {
     if (!user) return;
     try {
@@ -61,13 +71,19 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         artist_name: values.artist?.trim() || null,
         name: values.name.trim(),
         description: values.description?.trim() || null,
-        producer_name: values.producer,
+        producer_name: values.producer.trim(),
         created_by: user.id,
         due_at: values.dueAt ? new Date(values.dueAt).toISOString() : null,
       });
       if (error) throw error;
       toast.success("Demanda criada com sucesso!");
-      form.reset({ artist: "", name: "", description: "", dueAt: "", producer: "" });
+      form.reset({
+        artist: "",
+        name: "",
+        description: "",
+        dueAt: "",
+        producer: isProducer && displayName ? displayName : "",
+      });
       setOpen(false);
       onCreated();
     } catch (err: unknown) {
@@ -166,20 +182,22 @@ export default function CreateDemandDialog({ onCreated }: Props) {
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
-                    disabled={producers.length === 0}
+                    disabled={producerDisabled || producerOptions.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={producers.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />
+                        <SelectValue placeholder={producerOptions.length === 0 ? "Nenhum produtor cadastrado" : "Selecione o produtor"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {producers.map((name) => (
+                      {producerOptions.map((name) => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">Consulte a disponibilidade no topo da página.</p>
+                  {!producerDisabled && (
+                    <p className="text-xs text-muted-foreground">Consulte a disponibilidade no topo da página.</p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -187,7 +205,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
             <Button
               type="submit"
               className="w-full"
-              disabled={form.formState.isSubmitting || producers.length === 0}
+              disabled={form.formState.isSubmitting || producerOptions.length === 0}
             >
               {form.formState.isSubmitting ? "Criando..." : "Criar Demanda"}
             </Button>

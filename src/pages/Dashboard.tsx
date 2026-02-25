@@ -149,7 +149,7 @@ export default function Dashboard() {
         setDateFilter={setDateFilter}
         producers={producers}
         showFilters={canEditOrDelete}
-        showCreateButton={role === "atendente" || role === "admin" || role === "ceo"}
+        showCreateButton={role === "atendente" || role === "admin" || role === "ceo" || role === "produtor"}
         onCreated={refetch}
       />
       {demandsLoading ? (
