@@ -11,6 +11,7 @@ import { CalendarCheck } from "lucide-react";
 export default function ProducerAvailabilityView() {
   const { data: rows = [], isLoading } = useProducerAvailabilityForView(true);
   const [selectedProducer, setSelectedProducer] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
   const byProducer = useMemo(() => {
     const map = new Map<string, AvailabilityForViewRow[]>();
@@ -46,15 +47,21 @@ export default function ProducerAvailabilityView() {
   const firstProducer = producers[0];
   const currentProducer = selectedProducer || (firstProducer ?? "");
 
+  const slotsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const key = format(selectedDate, "yyyy-MM-dd");
+    return byDate.get(key) ?? [];
+  }, [selectedDate, byDate]);
+
   return (
-    <Card>
+    <Card className="border border-border/70 shadow-sm rounded-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarCheck className="h-5 w-5" />
-          Disponibilidade dos produtores
+          Agenda dos produtores
         </CardTitle>
         <CardDescription>
-          Consulte quando cada produtor está disponível para planejar e solicitar demandas.
+          Veja em quais dias cada produtor já tem entregas agendadas para evitar conflitos ao criar novas demandas.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -79,7 +86,7 @@ export default function ProducerAvailabilityView() {
 
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : selectedRows.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4">
@@ -90,36 +97,58 @@ export default function ProducerAvailabilityView() {
                 : "Selecione um produtor para ver os horários."}
           </p>
         ) : (
-          <div className="flex flex-col sm:flex-row gap-6">
-            <Calendar
-              mode="single"
-              selected={undefined}
-              locale={ptBR}
-              modifiers={{ available: markedDates }}
-              modifiersClassNames={{ available: "bg-primary/20 font-semibold" }}
-            />
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium mb-2">
-                {currentProducer ? `Horários – ${currentProducer}` : "Horários"}
-              </h4>
-              <ul className="space-y-3">
-                {Array.from(byDate.entries())
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([dateStr, slotList]) => (
-                    <li key={dateStr} className="rounded-lg border bg-card p-3 text-sm">
-                      <span className="font-medium text-muted-foreground">
-                        {format(new Date(dateStr + "T12:00:00"), "EEEE, d 'de' MMMM", { locale: ptBR })}
-                      </span>
-                      <ul className="mt-1 flex flex-wrap gap-2">
-                        {slotList.map((s, i) => (
-                          <li key={`${s.date}-${s.slot_start}-${i}`} className="rounded bg-muted px-2 py-0.5">
+          <div className="space-y-3">
+            <h4 className="font-medium">
+              {currentProducer ? `Horários – ${currentProducer}` : "Horários"}
+            </h4>
+            <div className="flex w-full flex-col items-center gap-3 rounded-xl bg-muted/40 px-4 py-4 shadow-inner">
+              <Calendar
+                className="w-full max-w-none rounded-xl border bg-background shadow-sm"
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                locale={ptBR}
+                modifiers={{ busy: markedDates }}
+                modifiersClassNames={{
+                  busy:
+                    "bg-destructive text-destructive-foreground font-semibold rounded-full border border-destructive",
+                }}
+              />
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-destructive" />
+                  <span>Dia ocupado</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full border border-muted-foreground/60" />
+                  <span>Dia sem disponibilidade</span>
+                </div>
+              </div>
+              <div className="w-full rounded-lg border bg-card px-3 py-2 text-xs sm:text-sm text-muted-foreground">
+                {selectedDate ? (
+                  slotsForSelectedDate.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <p className="font-medium text-foreground">
+                        {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {slotsForSelectedDate.map((s, i) => (
+                          <span
+                            key={`${s.date}-${s.slot_start}-${i}`}
+                            className="rounded-full bg-muted px-2 py-0.5 text-xs"
+                          >
                             {timeShort(s.slot_start)} – {timeShort(s.slot_end)}
-                          </li>
+                          </span>
                         ))}
-                      </ul>
-                    </li>
-                  ))}
-              </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <p>Este dia não possui horários cadastrados para este produtor.</p>
+                  )
+                ) : (
+                  <p>Clique em um dia destacado para ver os horários disponíveis.</p>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -28,7 +28,7 @@ const createDemandSchema = z.object({
   artist: z.string().optional().or(z.literal("")),
   name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
   description: z.string().max(2000).optional().or(z.literal("")),
-  dueAt: z.string().optional().or(z.literal("")),
+  dueAt: z.string().min(1, "Prazo de entrega é obrigatório"),
   producer: z.string().min(1, "Selecione um produtor"),
 });
 
@@ -67,11 +67,36 @@ export default function CreateDemandDialog({ onCreated }: Props) {
   const onSubmit = async (values: CreateDemandForm) => {
     if (!user) return;
     try {
+      const trimmedProducer = values.producer.trim();
+      const trimmedDueAt = values.dueAt?.trim() || "";
+
+      if (trimmedDueAt) {
+        const dueDate = new Date(trimmedDueAt);
+        const startOfDay = new Date(dueDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(dueDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const { data: existingDemands, error: conflictError } = await supabase
+          .from("demands")
+          .select("id, name, due_at")
+          .eq("producer_name", trimmedProducer)
+          .gte("due_at", startOfDay.toISOString())
+          .lte("due_at", endOfDay.toISOString());
+
+        if (conflictError) throw conflictError;
+
+        if (existingDemands && existingDemands.length > 0) {
+          toast.error("Este produtor já tem uma demanda com entrega marcada para esse dia. Escolha outra data.");
+          return;
+        }
+      }
+
       const { error } = await supabase.from("demands").insert({
         artist_name: values.artist?.trim() || null,
         name: values.name.trim(),
         description: values.description?.trim() || null,
-        producer_name: values.producer.trim(),
+        producer_name: trimmedProducer,
         solicitante_name: displayName?.trim() || null,
         created_by: user.id,
         due_at: values.dueAt ? new Date(values.dueAt).toISOString() : null,
@@ -165,11 +190,11 @@ export default function CreateDemandDialog({ onCreated }: Props) {
                   <FormControl>
                     <Input
                       type="datetime-local"
+                      required
                       {...field}
                       min={new Date().toISOString().slice(0, 16)}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">Opcional.</p>
                   <FormMessage />
                 </FormItem>
               )}

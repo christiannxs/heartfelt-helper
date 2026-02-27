@@ -2,15 +2,29 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProducerAvailabilityCalendar from "@/components/ProducerAvailabilityCalendar";
 
-vi.mock("@/hooks/useProducerAvailability", () => ({
-  useMyAvailability: vi.fn(() => ({
-    data: [],
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: { id: "user-1" },
+    role: "produtor",
+    displayName: "Produtor 1",
+    loading: false,
+    signIn: vi.fn(),
+    signUpWithRole: vi.fn(),
+    createUserAsAdmin: vi.fn(),
+    sendPasswordReset: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/useDemands", () => ({
+  useDemands: () => ({
+    demands: [],
+    deliverables: [],
     isLoading: false,
-    insertSlot: vi.fn(),
-    deleteSlot: vi.fn(),
-    isInserting: false,
-    isDeleting: false,
-  })),
+    refetch: vi.fn(),
+    updateStatusMutation: { mutateAsync: vi.fn() },
+    deleteDemandMutation: { mutate: vi.fn() },
+  }),
 }));
 
 vi.mock("sonner", () => ({
@@ -20,12 +34,7 @@ vi.mock("sonner", () => ({
 describe("ProducerAvailabilityCalendar", () => {
   it("renders title and description", () => {
     render(<ProducerAvailabilityCalendar userId="user-1" />);
-    expect(screen.getByText("Minha disponibilidade")).toBeInTheDocument();
-    expect(screen.getByText(/Clique em um dia e escolha/)).toBeInTheDocument();
-  });
-
-  it("shows hint when no date selected", () => {
-    render(<ProducerAvailabilityCalendar userId="user-1" />);
-    expect(screen.getByText("Clique em um dia no calendário.")).toBeInTheDocument();
+    expect(screen.getByText("Meu calendário de entregas")).toBeInTheDocument();
+    expect(screen.getByText(/Cada demanda com prazo de entrega marcado ocupa automaticamente o dia correspondente/)).toBeInTheDocument();
   });
 });

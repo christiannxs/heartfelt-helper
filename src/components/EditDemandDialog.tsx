@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ARTISTS } from "@/lib/artists";
+import { toast as sonnerToast } from "sonner";
 
 export interface DemandForEdit {
   id: string;
@@ -29,7 +30,7 @@ interface Props {
 }
 
 export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated }: Props) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { data: producers = [] } = useProducers(role);
   const [artist, setArtist] = useState("");
   const [name, setName] = useState("");
@@ -38,6 +39,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
   const [status, setStatus] = useState<string>("aguardando");
   const [dueAt, setDueAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [canEditDatesAndDetails, setCanEditDatesAndDetails] = useState(true);
 
   useEffect(() => {
     if (demand) {
@@ -53,23 +55,31 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
       } else {
         setDueAt("");
       }
+      // Apenas o criador pode editar campos gerais (incluindo prazo)
+      setCanEditDatesAndDetails(user?.id === (demand as any).created_by);
     }
-  }, [demand]);
+  }, [demand, user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!demand) return;
+    if (canEditDatesAndDetails && !dueAt) {
+      toast.error("Informe a data e hora do prazo de entrega.");
+      return;
+    }
     setSubmitting(true);
     try {
       const { error } = await supabase
         .from("demands")
         .update({
-          artist_name: artist?.trim() || null,
-          name,
-          description: description || null,
-          producer_name: producer,
+          artist_name: canEditDatesAndDetails ? (artist?.trim() || null) : demand.artist_name,
+          name: canEditDatesAndDetails ? name : demand.name,
+          description: canEditDatesAndDetails ? (description || null) : demand.description,
+          producer_name: canEditDatesAndDetails ? producer : demand.producer_name,
           status: status as "aguardando" | "em_producao" | "concluido",
-          due_at: dueAt ? new Date(dueAt).toISOString() : null,
+          due_at: canEditDatesAndDetails
+            ? (dueAt ? new Date(dueAt).toISOString() : null)
+            : demand.due_at,
         })
         .eq("id", demand.id);
       if (error) throw error;
@@ -77,7 +87,12 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
       onOpenChange(false);
       onUpdated();
     } catch (err: unknown) {
-      toast.error("Erro ao atualizar: " + (err instanceof Error ? err.message : "Erro desconhecido"));
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao atualizar: " + msg);
+      // Ajuda a diferenciar erro de permissão (quando não é o criador)
+      if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("policy")) {
+        sonnerToast.error("Apenas quem criou a demanda pode alterar o prazo e os detalhes. Peça ao criador para ajustar.");
+      }
     }
     setSubmitting(false);
   };
@@ -129,6 +144,7 @@ export default function EditDemandDialog({ demand, open, onOpenChange, onUpdated
                 type="datetime-local"
                 value={dueAt}
                 onChange={(e) => setDueAt(e.target.value)}
+                required={canEditDatesAndDetails}
               />
             </div>
             <div className="space-y-2">

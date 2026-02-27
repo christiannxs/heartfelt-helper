@@ -74,7 +74,9 @@ export default function DemandCard({
   const overdue = isOverdue(demand.due_at, demand.status);
 
   return (
-    <Card className={`transition-shadow hover:shadow-md ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}>
+    <Card
+      className={`rounded-xl border-border transition-shadow hover:shadow-md ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-0.5">

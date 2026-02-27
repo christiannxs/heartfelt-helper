@@ -1,0 +1,113 @@
+import DemandCard from "@/components/DemandCard";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { DemandRow, DeliverableRow } from "@/types/demands";
+import type { AppRole } from "@/hooks/useAuth";
+import type { UseMutationResult } from "@tanstack/react-query";
+import { Clock, Loader2, CheckCircle2 } from "lucide-react";
+
+const KANBAN_COLUMNS: { id: "aguardando" | "em_producao" | "concluido"; label: string; icon: React.ReactNode; accentClass: string }[] = [
+  {
+    id: "aguardando",
+    label: "Aguardando",
+    icon: <Clock className="h-4 w-4" />,
+    accentClass: "border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/5",
+  },
+  {
+    id: "em_producao",
+    label: "Em produção",
+    icon: <Loader2 className="h-4 w-4" />,
+    accentClass: "border-primary/40 bg-primary/5",
+  },
+  {
+    id: "concluido",
+    label: "Concluído",
+    icon: <CheckCircle2 className="h-4 w-4" />,
+    accentClass: "border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/5",
+  },
+];
+
+interface DemandKanbanProps {
+  filtered: DemandRow[];
+  deliverables: DeliverableRow[];
+  role: AppRole | null;
+  userId: string;
+  updatingId: string | null;
+  onUpdateStatus: (id: string, newStatus: string) => void;
+  onRefresh: () => void;
+  canEditOrDelete: boolean;
+  onEdit: (demand: DemandRow) => void;
+  onDelete: (id: string) => void;
+  updateStatusMutation: UseMutationResult<void, Error, { id: string; status: "aguardando" | "em_producao" | "concluido" }, unknown>;
+  deleteDemandMutation: UseMutationResult<void, Error, string, unknown>;
+}
+
+export default function DemandKanban({
+  filtered,
+  deliverables,
+  role,
+  userId,
+  updatingId,
+  onUpdateStatus,
+  onRefresh,
+  canEditOrDelete,
+  onEdit,
+  onDelete,
+  updateStatusMutation,
+  deleteDemandMutation,
+}: DemandKanbanProps) {
+  const byStatus = {
+    aguardando: filtered.filter((d) => d.status === "aguardando"),
+    em_producao: filtered.filter((d) => d.status === "em_producao"),
+    concluido: filtered.filter((d) => d.status === "concluido"),
+  };
+
+  return (
+    <div className="overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="flex gap-4 min-w-max items-stretch">
+        {KANBAN_COLUMNS.map((col) => {
+          const items = byStatus[col.id];
+          return (
+            <div
+              key={col.id}
+              className={`flex w-[320px] min-w-[320px] max-w-[320px] shrink-0 flex-col rounded-xl border max-h-[calc(100vh-260px)] ${col.accentClass}`}
+            >
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border/50 shrink-0">
+                <span className="flex items-center gap-2 font-semibold text-sm text-foreground">
+                  {col.icon}
+                  {col.label}
+                </span>
+                <span className="tabular-nums text-xs text-muted-foreground bg-background/60 rounded-full px-2 py-0.5">
+                  {items.length}
+                </span>
+              </div>
+              <ScrollArea className="min-h-[200px] flex-1 overflow-hidden">
+                <div className="p-3 space-y-3">
+                  {items.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-6">Nenhuma demanda</p>
+                  ) : (
+                    items.map((d) => (
+                      <DemandCard
+                        key={d.id}
+                        demand={d}
+                        role={role}
+                        deliverable={deliverables.find((x) => x.demand_id === d.id) ?? null}
+                        userId={userId}
+                        onUpdateStatus={onUpdateStatus}
+                        onRefresh={onRefresh}
+                        updating={updatingId === d.id}
+                        canEditOrDelete={canEditOrDelete}
+                        onEdit={canEditOrDelete ? onEdit : undefined}
+                        onDelete={canEditOrDelete ? onDelete : undefined}
+                        deleting={deleteDemandMutation.isPending}
+                      />
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

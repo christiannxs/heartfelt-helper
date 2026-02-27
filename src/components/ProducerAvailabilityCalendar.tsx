@@ -1,157 +1,75 @@
-import { useState } from "react";
-import { format, startOfDay } from "date-fns";
+import { useMemo } from "react";
+import { startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMyAvailability, type ProducerAvailabilityRow } from "@/hooks/useProducerAvailability";
-import { timeShort } from "@/lib/utils";
-import { handleApiError } from "@/lib/errors";
-import { toast } from "sonner";
-import { CalendarDays, Sun, Moon, Clock, X } from "lucide-react";
-
-const PRESETS = [
-  { id: "manha", label: "Manhã", start: "08:00:00", end: "12:00:00", icon: Sun },
-  { id: "tarde", label: "Tarde", start: "14:00:00", end: "18:00:00", icon: Moon },
-  { id: "dia", label: "Dia todo", start: "08:00:00", end: "18:00:00", icon: Clock },
-] as const;
-
-function slotMatches(s: ProducerAvailabilityRow, start: string, end: string): boolean {
-  const a = s.slot_start.slice(0, 5);
-  const b = s.slot_end.slice(0, 5);
-  const x = start.slice(0, 5);
-  const y = end.slice(0, 5);
-  return a === x && b === y;
-}
+import { CalendarDays, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useDemands } from "@/hooks/useDemands";
 
 interface Props {
   userId: string;
 }
 
 export default function ProducerAvailabilityCalendar({ userId }: Props) {
-  const { data: slots = [], isLoading, insertSlot, deleteSlot, isInserting, isDeleting } = useMyAvailability(userId);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const busy = isInserting || isDeleting;
+  const { displayName } = useAuth();
+  const { demands, isLoading } = useDemands();
 
-  const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-  const slotsForSelected = selectedDate
-    ? slots.filter((s) => s.date === selectedDateStr)
-    : [];
-
-  const handlePreset = async (start: string, end: string) => {
-    if (!selectedDate) return;
-    const already = slotsForSelected.some((s) => slotMatches(s, start, end));
-    if (already) {
-      toast.info("Este período já está marcado.");
-      return;
-    }
-    try {
-      await insertSlot({
-        user_id: userId,
-        date: selectedDateStr,
-        slot_start: start,
-        slot_end: end,
+  const markedDates = useMemo(() => {
+    if (!displayName) return [];
+    const dates = demands
+      .filter((d) => d.producer_name === displayName && d.due_at)
+      .map((d) => {
+        const date = new Date(d.due_at!);
+        return startOfDay(date);
       });
-      toast.success("Adicionado!");
-    } catch (e) {
-      handleApiError(e, "Erro ao salvar.");
-    }
-  };
 
-  const handleDelete = async (row: ProducerAvailabilityRow) => {
-    try {
-      await deleteSlot(row.id);
-      toast.success("Removido.");
-    } catch (e) {
-      handleApiError(e, "Erro ao remover.");
-    }
-  };
-
-  const markedDates = [...new Set(slots.map((s) => s.date))].map((d) => startOfDay(new Date(d)));
+    return [...new Set(dates.map((d) => d.toISOString()))].map((iso) => startOfDay(new Date(iso)));
+  }, [demands, displayName]);
 
   return (
-    <Card>
+    <Card className="border border-border/70 shadow-sm rounded-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5" />
-          Minha disponibilidade
+          Meu calendário de entregas
         </CardTitle>
         <CardDescription>
-          Clique em um dia e escolha Manhã, Tarde ou Dia todo. Assim a equipe sabe quando você está disponível.
+          Cada demanda com prazo de entrega marcado ocupa automaticamente o dia correspondente. Dias destacados
+          indicam datas já comprometidas com entregas.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-6">
-          <div className="flex flex-col items-center">
+      <CardContent className="space-y-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+          <div className="flex w-full flex-col items-center gap-3 rounded-xl bg-muted/40 px-4 py-4 shadow-inner">
             <Calendar
+              className="w-full max-w-none rounded-xl border bg-background shadow-sm"
               mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
+              selected={undefined}
+              onSelect={undefined}
               locale={ptBR}
               disabled={(date) => date < startOfDay(new Date())}
-              modifiers={{ available: markedDates }}
-              modifiersClassNames={{ available: "bg-primary/20 font-semibold" }}
+              modifiers={{ busy: markedDates }}
+              modifiersClassNames={{
+                busy:
+                  "bg-destructive text-destructive-foreground font-semibold rounded-full border border-destructive",
+              }}
             />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {selectedDate ? (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-                </p>
-                <p className="text-xs text-muted-foreground">Toque para adicionar:</p>
-                <div className="flex flex-wrap gap-2">
-                  {PRESETS.map(({ label, start, end, icon: Icon }) => (
-                    <Button
-                      key={label}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 min-h-[44px] touch-manipulation"
-                      onClick={() => handlePreset(start, end)}
-                      disabled={busy}
-                      aria-busy={busy}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-                {slotsForSelected.length > 0 && (
-                  <>
-                    <p className="text-xs text-muted-foreground pt-1">Marcados (toque em ✕ para remover):</p>
-                    <div className="flex flex-wrap gap-2">
-                      {slotsForSelected.map((s) => (
-                        <span
-                          key={s.id}
-                          className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-sm"
-                        >
-                          {timeShort(s.slot_start)}–{timeShort(s.slot_end)}
-                          <button
-                            type="button"
-                            aria-label="Remover"
-                            className="rounded-full p-0.5 hover:bg-primary/30 disabled:opacity-50"
-                            onClick={() => handleDelete(s)}
-                            disabled={busy}
-                            aria-busy={isDeleting}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                )}
+            <div className="mt-1 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full bg-destructive" />
+                <span>Dia ocupado (entrega marcada)</span>
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Clique em um dia no calendário.</p>
-            )}
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-full border border-muted-foreground/60" />
+                <span>Dia livre</span>
+              </div>
+            </div>
           </div>
         </div>
         {isLoading && (
           <div className="flex justify-center py-2">
-            <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
       </CardContent>

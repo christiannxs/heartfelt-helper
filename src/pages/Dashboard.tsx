@@ -14,7 +14,7 @@ import ProducerAvailabilityCalendar from "@/components/ProducerAvailabilityCalen
 import ProducerAvailabilityView from "@/components/ProducerAvailabilityView";
 import DemandStatsCards from "@/components/dashboard/DemandStatsCards";
 import DemandFilters from "@/components/dashboard/DemandFilters";
-import DemandList from "@/components/dashboard/DemandList";
+import DemandKanban from "@/components/dashboard/DemandKanban";
 import ArtistReportView from "@/components/dashboard/ArtistReportView";
 import type { DemandRow } from "@/types/demands";
 import { getPeriodStart, countDueSoon } from "@/lib/demands";
@@ -127,55 +127,99 @@ export default function Dashboard() {
     ) : null;
 
   const demandsContent = (
-    <div className="space-y-6">
-      {availabilitySection && <section className="space-y-4">{availabilitySection}</section>}
+    <div className="space-y-8">
+      {/* Cabeçalho da aba Demandas */}
+      <header className="space-y-1">
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Demandas</h2>
+        <p className="text-sm text-muted-foreground">
+          Acompanhe e gerencie as solicitações por status, produtor e período.
+        </p>
+      </header>
+
+      {availabilitySection && (
+        <section className="rounded-xl border border-border bg-card/50 p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Disponibilidade</h3>
+          {availabilitySection}
+        </section>
+      )}
+
       {dueSoonCount > 0 && (
-        <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-4 py-3 text-sm text-[hsl(var(--warning))]">
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-4 py-3.5 text-sm text-[hsl(var(--warning))]"
+        >
           <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span>{dueSoonCount} {dueSoonCount === 1 ? "demanda com prazo" : "demandas com prazo"} nos próximos 2 dias.</span>
+          <span>
+            {dueSoonCount} {dueSoonCount === 1 ? "demanda com prazo" : "demandas com prazo"} nos próximos 2 dias.
+          </span>
         </div>
       )}
-      <DemandStatsCards
-        counts={counts}
-        filterStatus={filterStatus}
-        onStatusCardClick={handleStatusCardClick}
-      />
-      <DemandFilters
-        filterStatus={filterStatus}
-        setFilterStatus={setFilterStatus}
-        filterProducer={filterProducer}
-        setFilterProducer={setFilterProducer}
-        dateFilter={dateFilter}
-        setDateFilter={setDateFilter}
-        producers={producers}
-        showFilters={canEditOrDelete}
-        showCreateButton={role === "atendente" || role === "admin" || role === "ceo" || role === "produtor"}
-        onCreated={refetch}
-      />
-      {demandsLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>Nenhuma demanda encontrada.</p>
-        </div>
-      ) : (
-        <DemandList
-          filtered={filtered}
-          deliverables={deliverables}
-          role={role}
-          userId={user.id}
-          updatingId={updatingId}
-          onUpdateStatus={handleUpdateStatus}
-          onRefresh={refetch}
-          canEditOrDelete={canEditOrDelete}
-          onEdit={setEditingDemand}
-          onDelete={(id) => deleteDemandMutation.mutate(id)}
-          updateStatusMutation={updateStatusMutation}
-          deleteDemandMutation={deleteDemandMutation}
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Resumo por status</h3>
+        <DemandStatsCards
+          counts={counts}
+          filterStatus={filterStatus}
+          onStatusCardClick={handleStatusCardClick}
         />
-      )}
+      </section>
+
+      <section className="space-y-3">
+        <DemandFilters
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterProducer={filterProducer}
+          setFilterProducer={setFilterProducer}
+          dateFilter={dateFilter}
+          setDateFilter={setDateFilter}
+          producers={producers}
+          showFilters={canEditOrDelete}
+          showCreateButton={role === "atendente" || role === "admin" || role === "ceo" || role === "produtor"}
+          onCreated={refetch}
+        />
+      </section>
+
+      <section className="space-y-4">
+        {demandsLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="animate-spin h-10 w-10 border-2 border-primary border-t-transparent rounded-full" />
+            <p className="text-sm text-muted-foreground">Carregando demandas...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center py-16 px-4 text-center">
+            <LayoutDashboard className="h-12 w-12 text-muted-foreground/60 mb-3" />
+            <p className="font-medium text-foreground">Nenhuma demanda encontrada</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              Ajuste os filtros ou crie uma nova demanda para começar.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Lista de demandas
+              </h3>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+              </span>
+            </div>
+            <DemandKanban
+              filtered={filtered}
+              deliverables={deliverables}
+              role={role}
+              userId={user.id}
+              updatingId={updatingId}
+              onUpdateStatus={handleUpdateStatus}
+              onRefresh={refetch}
+              canEditOrDelete={canEditOrDelete}
+              onEdit={setEditingDemand}
+              onDelete={(id) => deleteDemandMutation.mutate(id)}
+              updateStatusMutation={updateStatusMutation}
+              deleteDemandMutation={deleteDemandMutation}
+            />
+          </>
+        )}
+      </section>
     </div>
   );
 

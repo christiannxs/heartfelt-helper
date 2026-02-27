@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CreateDemandDialog from "@/components/CreateDemandDialog";
-import { LayoutDashboard } from "lucide-react";
+import { Filter } from "lucide-react";
 
 const PERIOD_OPTIONS = [
   { value: "all", label: "Todos os períodos" },
@@ -35,49 +35,55 @@ export default function DemandFilters({
   onCreated,
 }: DemandFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3">
-      <div className="flex items-center gap-2">
-        <LayoutDashboard className="h-5 w-5 text-muted-foreground shrink-0" />
-        <h2 className="text-lg font-semibold">Demandas</h2>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 min-h-[44px]">
-        <Select value={dateFilter} onValueChange={setDateFilter}>
-          <SelectTrigger className="w-full sm:w-[160px] min-h-[44px] sm:min-h-0">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIOD_OPTIONS.map(({ value, label }) => (
-              <SelectItem key={value} value={value}>{label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {showFilters && (
-          <>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-[150px] min-h-[44px] sm:min-h-0">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="aguardando">Aguardando</SelectItem>
-                <SelectItem value="em_producao">Em Produção</SelectItem>
-                <SelectItem value="concluido">Concluído</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterProducer} onValueChange={setFilterProducer}>
-              <SelectTrigger className="w-full sm:w-[150px] min-h-[44px] sm:min-h-0">
-                <SelectValue placeholder="Produtor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Produtores</SelectItem>
-                {producers.map((name) => (
-                  <SelectItem key={name} value={name}>{name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </>
-        )}
-        {showCreateButton && <CreateDemandDialog onCreated={onCreated} />}
+    <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+          <h3 className="text-sm font-semibold text-foreground">Filtros</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 min-h-[44px]">
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-full sm:w-[160px] min-h-[44px] sm:min-h-0">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {showFilters && (
+            <>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[150px] min-h-[44px] sm:min-h-0">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="aguardando">Aguardando</SelectItem>
+                  <SelectItem value="em_producao">Em produção</SelectItem>
+                  <SelectItem value="concluido">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterProducer} onValueChange={setFilterProducer}>
+                <SelectTrigger className="w-full sm:w-[150px] min-h-[44px] sm:min-h-0">
+                  <SelectValue placeholder="Produtor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os produtores</SelectItem>
+                  {producers.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          {showCreateButton && (
+            <div className="w-full sm:w-auto sm:ml-2">
+              <CreateDemandDialog onCreated={onCreated} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
