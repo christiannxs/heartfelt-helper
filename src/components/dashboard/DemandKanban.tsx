@@ -78,7 +78,7 @@ export default function DemandKanban({
           return (
             <div
               key={col.id}
-              className={`flex w-[360px] min-w-[360px] max-w-[360px] h-[calc(100vh-240px)] shrink-0 flex-col rounded-xl border overflow-hidden ${col.accentClass}`}
+              className={`flex w-[380px] min-w-[380px] max-w-[380px] h-[calc(100vh-240px)] shrink-0 flex-col rounded-xl border overflow-hidden ${col.accentClass}`}
             >
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border/50 shrink-0">
                 <span className="flex items-center gap-2 font-semibold text-sm text-foreground whitespace-nowrap">

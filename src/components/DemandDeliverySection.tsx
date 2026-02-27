@@ -155,12 +155,12 @@ export default function DemandDeliverySection({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors min-w-0 flex-wrap"
         >
           {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
           <FileAudio className="h-3 w-3 shrink-0" />
-          <span className="flex-1 truncate">Entrega e comentários</span>
-          {summary && <span className="shrink-0 text-[10px] opacity-80">{summary}</span>}
+          <span className="min-w-0 break-words">Entrega e comentários</span>
+          {summary && <span className="text-[10px] opacity-80">{summary}</span>}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>

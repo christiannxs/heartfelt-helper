@@ -92,16 +92,16 @@ export default function DemandCard({
 
   return (
     <Card
-      className={`rounded-lg border-border transition-shadow hover:shadow-md overflow-hidden ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
+      className={`rounded-lg border-border transition-shadow hover:shadow-md overflow-hidden min-w-0 ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
     >
       <CardHeader className="p-3 pb-1 space-y-2">
         {/* Linha 1: artista + título + status + ações */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {demand.artist_name && (
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide truncate">{demand.artist_name}</p>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide break-words line-clamp-1">{demand.artist_name}</p>
             )}
-            <CardTitle className="text-sm leading-snug line-clamp-2 break-words mt-0.5">{demand.name}</CardTitle>
+            <CardTitle className="text-sm leading-snug line-clamp-3 break-words mt-0.5">{demand.name}</CardTitle>
           </div>
           <div className="flex items-center gap-1 shrink-0 flex-shrink-0">
             <Badge className={`${config.className} whitespace-nowrap text-[10px] px-1.5 py-0 shrink-0`}>
@@ -204,7 +204,7 @@ export default function DemandCard({
       </CardHeader>
       <CardContent className="p-3 pt-0 space-y-2">
         {demand.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 break-words">{demand.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-3 break-words">{demand.description}</p>
         )}
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground">
           {demand.solicitante_name && (
