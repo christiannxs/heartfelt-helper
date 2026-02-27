@@ -22,11 +22,12 @@ import {
 import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw, AlertTriangle, Eye } from "lucide-react";
 import DemandDeliverySection from "@/components/DemandDeliverySection";
 import type { DemandRow, DeliverableRow } from "@/types/demands";
+import type { AppRole } from "@/hooks/useAuth";
 import { isDueSoon, isOverdue } from "@/lib/demands";
 
 interface DemandCardProps {
   demand: DemandRow;
-  role: string | null;
+  role: AppRole | null;
   deliverable?: DeliverableRow | null;
   userId?: string;
   onUpdateStatus?: (id: string, newStatus: string) => void;
@@ -75,20 +76,21 @@ export default function DemandCard({
 
   return (
     <Card
-      className={`rounded-xl border-border transition-shadow hover:shadow-md ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
+      className={`rounded-xl border-border transition-shadow hover:shadow-md overflow-hidden ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="p-4 pb-2 space-y-3">
+        {/* Linha 1: artista + título (com clamp) e ações */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 space-y-0.5">
+          <div className="min-w-0 flex-1">
             {demand.artist_name && (
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{demand.artist_name}</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">{demand.artist_name}</p>
             )}
-            <CardTitle className="text-base leading-snug">{demand.name}</CardTitle>
+            <CardTitle className="text-base leading-snug line-clamp-2 break-words mt-0.5">{demand.name}</CardTitle>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <Dialog>
               <DialogTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" title="Abrir">
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 touch-manipulation" title="Abrir">
                   <Eye className="h-3.5 w-3.5" />
                 </Button>
               </DialogTrigger>
@@ -128,14 +130,14 @@ export default function DemandCard({
               </DialogContent>
             </Dialog>
             {canEditOrDelete && onEdit && (
-              <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" onClick={() => onEdit(demand)} title="Editar">
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 touch-manipulation" onClick={() => onEdit(demand)} title="Editar">
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             )}
             {canEditOrDelete && onDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 min-h-[44px] min-w-[44px] text-destructive hover:text-destructive touch-manipulation sm:h-8 sm:w-8 sm:min-h-0 sm:min-w-0" disabled={deleting} title="Apagar">
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive touch-manipulation" disabled={deleting} title="Apagar">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </AlertDialogTrigger>
@@ -155,20 +157,23 @@ export default function DemandCard({
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Badge className={config.className}>
-              <span className="flex items-center gap-1">
-                {config.icon}
-                {config.label}
-              </span>
-            </Badge>
           </div>
         </div>
+        {/* Linha 2: badge de status com espaço garantido (nunca trunca) */}
+        <div className="flex items-center justify-between gap-2">
+          <Badge className={`${config.className} whitespace-nowrap shrink-0 w-fit`}>
+            <span className="flex items-center gap-1.5">
+              {config.icon}
+              {config.label}
+            </span>
+          </Badge>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="p-4 pt-0 space-y-3">
         {demand.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{demand.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2 break-words">{demand.description}</p>
         )}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
           {demand.solicitante_name && (
             <span>Solicitante: <strong className="text-foreground">{demand.solicitante_name}</strong></span>
           )}

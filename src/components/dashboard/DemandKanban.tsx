@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import DemandCard from "@/components/DemandCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DemandRow, DeliverableRow } from "@/types/demands";
@@ -61,26 +62,32 @@ export default function DemandKanban({
     concluido: filtered.filter((d) => d.status === "concluido"),
   };
 
+  const deliverableByDemandId = useMemo(() => {
+    const map = new Map<string, DeliverableRow>();
+    for (const d of deliverables) map.set(d.demand_id, d);
+    return map;
+  }, [deliverables]);
+
   return (
     <div className="overflow-x-auto pb-2 -mx-1 px-1">
-      <div className="flex gap-4 min-w-max items-stretch">
+      <div className="flex gap-5 min-w-max items-stretch">
         {KANBAN_COLUMNS.map((col) => {
           const items = byStatus[col.id];
           return (
             <div
               key={col.id}
-              className={`flex w-[320px] min-w-[320px] max-w-[320px] shrink-0 flex-col rounded-xl border max-h-[calc(100vh-260px)] ${col.accentClass}`}
+              className={`flex w-[360px] min-w-[360px] max-w-[360px] h-[calc(100vh-240px)] shrink-0 flex-col rounded-xl border overflow-hidden ${col.accentClass}`}
             >
               <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border/50 shrink-0">
-                <span className="flex items-center gap-2 font-semibold text-sm text-foreground">
+                <span className="flex items-center gap-2 font-semibold text-sm text-foreground whitespace-nowrap">
                   {col.icon}
                   {col.label}
                 </span>
-                <span className="tabular-nums text-xs text-muted-foreground bg-background/60 rounded-full px-2 py-0.5">
+                <span className="tabular-nums text-xs text-muted-foreground bg-background/60 rounded-full px-2.5 py-1 shrink-0">
                   {items.length}
                 </span>
               </div>
-              <ScrollArea className="min-h-[200px] flex-1 overflow-hidden">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-3 space-y-3">
                   {items.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-6">Nenhuma demanda</p>
@@ -90,7 +97,7 @@ export default function DemandKanban({
                         key={d.id}
                         demand={d}
                         role={role}
-                        deliverable={deliverables.find((x) => x.demand_id === d.id) ?? null}
+                        deliverable={deliverableByDemandId.get(d.id) ?? null}
                         userId={userId}
                         onUpdateStatus={onUpdateStatus}
                         onRefresh={onRefresh}

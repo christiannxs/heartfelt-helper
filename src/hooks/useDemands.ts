@@ -9,7 +9,7 @@ async function fetchDemands(): Promise<DemandRow[]> {
   const { data, error } = await supabase
     .from("demands")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []) as DemandRow[];
 }
@@ -38,6 +38,7 @@ export function useDemands() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.demands.all }),
+    onError: (e) => handleApiError(e, "Erro ao atualizar status."),
   });
 
   const deleteDemandMutation = useMutation({
