@@ -41,6 +41,23 @@ export function useDemands() {
     onError: (e) => handleApiError(e, "Erro ao atualizar status."),
   });
 
+  const updatePhaseMutation = useMutation({
+    mutationFn: async ({
+      id,
+      phase,
+      checked,
+    }: {
+      id: string;
+      phase: "phase_producao" | "phase_gravacao" | "phase_mix_master";
+      checked: boolean;
+    }) => {
+      const { error } = await supabase.from("demands").update({ [phase]: checked }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.demands.all }),
+    onError: (e) => handleApiError(e, "Erro ao atualizar fase."),
+  });
+
   const deleteDemandMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("demands").delete().eq("id", id);
@@ -69,6 +86,7 @@ export function useDemands() {
     isLoading,
     refetch,
     updateStatusMutation,
+    updatePhaseMutation,
     deleteDemandMutation,
   };
 }

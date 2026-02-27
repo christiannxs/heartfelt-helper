@@ -20,10 +20,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Clock, Loader2, CheckCircle2, Play, Flag, Pencil, Trash2, RotateCcw, AlertTriangle, Eye } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import DemandDeliverySection from "@/components/DemandDeliverySection";
 import type { DemandRow, DeliverableRow } from "@/types/demands";
 import type { AppRole } from "@/hooks/useAuth";
 import { isDueSoon, isOverdue } from "@/lib/demands";
+
+type PhaseKey = "phase_producao" | "phase_gravacao" | "phase_mix_master";
+
+const PRODUCTION_PHASES: { key: PhaseKey; label: string }[] = [
+  { key: "phase_producao", label: "Produção" },
+  { key: "phase_gravacao", label: "Gravação" },
+  { key: "phase_mix_master", label: "Mix | Master" },
+];
 
 interface DemandCardProps {
   demand: DemandRow;
@@ -31,6 +40,8 @@ interface DemandCardProps {
   deliverable?: DeliverableRow | null;
   userId?: string;
   onUpdateStatus?: (id: string, newStatus: string) => void;
+  onUpdatePhase?: (params: { id: string; phase: PhaseKey; checked: boolean }) => void;
+  updatingPhase?: boolean;
   onRefresh?: () => void;
   updating?: boolean;
   canEditOrDelete?: boolean;
@@ -63,6 +74,8 @@ export default function DemandCard({
   deliverable = null,
   userId = "",
   onUpdateStatus,
+  onUpdatePhase,
+  updatingPhase = false,
   onRefresh,
   updating,
   canEditOrDelete = false,
@@ -73,25 +86,34 @@ export default function DemandCard({
   const config = statusConfig[demand.status] ?? statusConfig.aguardando;
   const dueSoon = isDueSoon(demand.due_at, demand.status);
   const overdue = isOverdue(demand.due_at, demand.status);
+  const isProducer = role === "produtor";
+  const showPhaseChecklist = demand.status === "em_producao";
+  const phaseChecked = (key: PhaseKey) => key === "phase_producao" ? demand.phase_producao : key === "phase_gravacao" ? demand.phase_gravacao : demand.phase_mix_master;
 
   return (
     <Card
-      className={`rounded-xl border-border transition-shadow hover:shadow-md overflow-hidden ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
+      className={`rounded-lg border-border transition-shadow hover:shadow-md overflow-hidden ${dueSoon || overdue ? "border-[hsl(var(--warning))]/50" : ""}`}
     >
-      <CardHeader className="p-4 pb-2 space-y-3">
-        {/* Linha 1: artista + título (com clamp) e ações */}
+      <CardHeader className="p-3 pb-1 space-y-2">
+        {/* Linha 1: artista + título + status + ações */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {demand.artist_name && (
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">{demand.artist_name}</p>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide truncate">{demand.artist_name}</p>
             )}
-            <CardTitle className="text-base leading-snug line-clamp-2 break-words mt-0.5">{demand.name}</CardTitle>
+            <CardTitle className="text-sm leading-snug line-clamp-2 break-words mt-0.5">{demand.name}</CardTitle>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 flex-shrink-0">
+            <Badge className={`${config.className} whitespace-nowrap text-[10px] px-1.5 py-0 shrink-0`}>
+              <span className="flex items-center gap-1">
+                {config.icon}
+                {config.label}
+              </span>
+            </Badge>
             <Dialog>
               <DialogTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 touch-manipulation" title="Abrir">
-                  <Eye className="h-3.5 w-3.5" />
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 touch-manipulation" title="Abrir">
+                  <Eye className="h-3 w-3" />
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -126,19 +148,39 @@ export default function DemandCard({
                       </span>
                     </Badge>
                   </div>
+                  {showPhaseChecklist && (
+                    <div className="rounded-md border border-border/60 bg-muted/30 p-3 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fases</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-2">
+                        {PRODUCTION_PHASES.map(({ key, label }) => (
+                          <label
+                            key={key}
+                            className={`flex items-center gap-2 text-sm cursor-pointer select-none ${!isProducer ? "cursor-default opacity-90" : ""}`}
+                          >
+                            <Checkbox
+                              checked={phaseChecked(key)}
+                              disabled={!isProducer || updatingPhase}
+                              onCheckedChange={(checked) => isProducer && onUpdatePhase?.({ id: demand.id, phase: key, checked: checked === true })}
+                            />
+                            <span className="text-foreground">{label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
             {canEditOrDelete && onEdit && (
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 touch-manipulation" onClick={() => onEdit(demand)} title="Editar">
-                <Pencil className="h-3.5 w-3.5" />
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 touch-manipulation" onClick={() => onEdit(demand)} title="Editar">
+                <Pencil className="h-3 w-3" />
               </Button>
             )}
             {canEditOrDelete && onDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-destructive hover:text-destructive touch-manipulation" disabled={deleting} title="Apagar">
-                    <Trash2 className="h-3.5 w-3.5" />
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive hover:text-destructive touch-manipulation" disabled={deleting} title="Apagar">
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -159,21 +201,12 @@ export default function DemandCard({
             )}
           </div>
         </div>
-        {/* Linha 2: badge de status com espaço garantido (nunca trunca) */}
-        <div className="flex items-center justify-between gap-2">
-          <Badge className={`${config.className} whitespace-nowrap shrink-0 w-fit`}>
-            <span className="flex items-center gap-1.5">
-              {config.icon}
-              {config.label}
-            </span>
-          </Badge>
-        </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-3">
+      <CardContent className="p-3 pt-0 space-y-2">
         {demand.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 break-words">{demand.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 break-words">{demand.description}</p>
         )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted-foreground">
           {demand.solicitante_name && (
             <span>Solicitante: <strong className="text-foreground">{demand.solicitante_name}</strong></span>
           )}
@@ -189,27 +222,44 @@ export default function DemandCard({
             </span>
           )}
         </div>
+        {showPhaseChecklist && (
+          <div className="rounded-md border border-border/60 bg-muted/30 p-2 space-y-1.5">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Fases</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {PRODUCTION_PHASES.map(({ key, label }) => (
+                <label
+                  key={key}
+                  className={`flex items-center gap-2 text-sm cursor-pointer select-none ${!isProducer ? "cursor-default opacity-90" : ""}`}
+                >
+                  <Checkbox
+                    checked={phaseChecked(key)}
+                    disabled={!isProducer || updatingPhase}
+                    onCheckedChange={(checked) => isProducer && onUpdatePhase?.({ id: demand.id, phase: key, checked: checked === true })}
+                  />
+                  <span className="text-foreground">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         {role === "produtor" && (
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-1.5">
             {demand.status === "aguardando" && (
-              <Button size="sm" onClick={() => onUpdateStatus?.(demand.id, "em_producao")} disabled={updating}>
-                <Play className="h-3.5 w-3.5 mr-1" /> Iniciar Produção
+              <Button size="sm" className="h-7 text-xs" onClick={() => onUpdateStatus?.(demand.id, "em_producao")} disabled={updating}>
+                <Play className="h-3 w-3 mr-1" /> Iniciar
               </Button>
             )}
             {demand.status === "em_producao" && (
-              <Button size="sm" variant="outline" className="border-[hsl(var(--success))] text-[hsl(var(--success))]" onClick={() => onUpdateStatus?.(demand.id, "concluido")} disabled={updating}>
-                <Flag className="h-3.5 w-3.5 mr-1" /> Finalizar
+              <Button size="sm" variant="outline" className="h-7 text-xs border-[hsl(var(--success))] text-[hsl(var(--success))]" onClick={() => onUpdateStatus?.(demand.id, "concluido")} disabled={updating}>
+                <Flag className="h-3 w-3 mr-1" /> Finalizar
               </Button>
             )}
           </div>
         )}
-        {/* Admin, Atendente, CEO: podem reabrir demanda concluída para alteração */}
         {(role === "admin" || role === "atendente" || role === "ceo") && demand.status === "concluido" && (
-          <div className="pt-1">
-            <Button size="sm" variant="outline" onClick={() => onUpdateStatus?.(demand.id, "em_producao")} disabled={updating}>
-              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Voltar para alteração
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onUpdateStatus?.(demand.id, "em_producao")} disabled={updating}>
+            <RotateCcw className="h-3 w-3 mr-1" /> Voltar para alteração
+          </Button>
         )}
         {/* Produtor: mostra aba de comentário e upload ao iniciar (em_producao) ou quando concluído */}
         {role === "produtor" && (demand.status === "em_producao" || demand.status === "concluido") && onRefresh && (

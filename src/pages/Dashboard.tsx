@@ -24,6 +24,7 @@ export default function Dashboard() {
     isLoading: demandsLoading,
     refetch,
     updateStatusMutation,
+    updatePhaseMutation,
     deleteDemandMutation,
   } = useDemands();
 
@@ -138,6 +139,7 @@ export default function Dashboard() {
         setEditingDemand={setEditingDemand}
         refetch={refetch}
         updateStatusMutation={updateStatusMutation}
+        updatePhaseMutation={updatePhaseMutation}
         deleteDemandMutation={deleteDemandMutation}
         handleStatusCardClick={handleStatusCardClick}
         handleUpdateStatus={handleUpdateStatus}

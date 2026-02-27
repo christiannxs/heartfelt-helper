@@ -59,12 +59,14 @@ interface ArtistReportViewProps {
   onEdit: (demand: DemandRow) => void;
   onDelete: (id: string) => void;
   updateStatusMutation: UseMutationResult<void, Error, { id: string; status: "aguardando" | "em_producao" | "concluido" }, unknown>;
+  updatePhaseMutation: UseMutationResult<void, Error, { id: string; phase: "phase_producao" | "phase_gravacao" | "phase_mix_master"; checked: boolean }, unknown>;
   deleteDemandMutation: UseMutationResult<void, Error, string, unknown>;
 }
 
 export default function ArtistReportView({
   demands,
   role,
+  updatePhaseMutation: _updatePhaseMutation,
 }: ArtistReportViewProps) {
   const [selectedArtist, setSelectedArtist] = useState<string>("all");
 

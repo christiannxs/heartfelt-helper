@@ -39,6 +39,7 @@ interface DemandKanbanProps {
   onEdit: (demand: DemandRow) => void;
   onDelete: (id: string) => void;
   updateStatusMutation: UseMutationResult<void, Error, { id: string; status: "aguardando" | "em_producao" | "concluido" }, unknown>;
+  updatePhaseMutation: UseMutationResult<void, Error, { id: string; phase: "phase_producao" | "phase_gravacao" | "phase_mix_master"; checked: boolean }, unknown>;
   deleteDemandMutation: UseMutationResult<void, Error, string, unknown>;
 }
 
@@ -54,6 +55,7 @@ export default function DemandKanban({
   onEdit,
   onDelete,
   updateStatusMutation,
+  updatePhaseMutation,
   deleteDemandMutation,
 }: DemandKanbanProps) {
   const byStatus = {
@@ -88,7 +90,7 @@ export default function DemandKanban({
                 </span>
               </div>
               <ScrollArea className="flex-1 min-h-0">
-                <div className="p-3 space-y-3">
+                <div className="p-2 space-y-2">
                   {items.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-6">Nenhuma demanda</p>
                   ) : (
@@ -100,6 +102,8 @@ export default function DemandKanban({
                         deliverable={deliverableByDemandId.get(d.id) ?? null}
                         userId={userId}
                         onUpdateStatus={onUpdateStatus}
+                        onUpdatePhase={updatePhaseMutation.mutate}
+                        updatingPhase={updatePhaseMutation.isPending && updatePhaseMutation.variables?.id === d.id}
                         onRefresh={onRefresh}
                         updating={updatingId === d.id}
                         canEditOrDelete={canEditOrDelete}

@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Upload, Download, Loader2, MessageSquare } from "lucide-react";
+import { Upload, Download, Loader2, MessageSquare, ChevronDown, ChevronRight, FileAudio } from "lucide-react";
 import type { DeliverableRow } from "@/types/demands";
 
 const BUCKET = "demand-files";
@@ -46,10 +47,12 @@ export default function DemandDeliverySection({
   const [commentsDraft, setCommentsDraft] = useState(deliverable?.comments ?? "");
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
+  const [open, setOpen] = useState(false);
   const canUpload = role === "produtor" || role === "atendente" || role === "ceo" || role === "admin";
   const canDownload = role === "atendente" || role === "ceo" || role === "admin";
   const storagePath = deliverable?.storage_path ?? null;
   const hasFile = !!storagePath && !!deliverable?.file_name;
+  const hasComments = !!(deliverable?.comments ?? commentsDraft)?.trim();
 
   useEffect(() => {
     setCommentsDraft(deliverable?.comments ?? "");
@@ -145,63 +148,76 @@ export default function DemandDeliverySection({
     }
   };
 
-  return (
-    <div className="mt-3 space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
-      <p className="text-xs font-medium text-muted-foreground">Entrega</p>
+  const summary = [hasFile ? "1 arquivo" : "Sem arquivo", hasComments ? "com comentários" : null].filter(Boolean).join(" · ");
 
-      {canUpload && (
-        <div className="space-y-1">
-          <Label className="text-xs">Enviar arquivo (WAV, MP3, etc.)</Label>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept={ACCEPT_AUDIO}
-                className="hidden"
-                disabled={uploading}
-                onChange={handleFileChange}
-              />
-              <Button type="button" size="sm" variant="outline" className="pointer-events-none" asChild>
-                <span>
-                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Upload className="h-3.5 w-3.5 mr-1" />}
-                  {uploading ? "Enviando..." : "Selecionar arquivo"}
-                </span>
-              </Button>
-            </label>
-            {hasFile && (
-              <span className="text-xs text-muted-foreground truncate max-w-[180px]" title={deliverable?.file_name ?? undefined}>
-                {deliverable?.file_name}
-              </span>
-            )}
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="mt-2">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+        >
+          {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
+          <FileAudio className="h-3 w-3 shrink-0" />
+          <span className="flex-1 truncate">Entrega e comentários</span>
+          {summary && <span className="shrink-0 text-[10px] opacity-80">{summary}</span>}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-2 space-y-2.5 rounded-md border border-border/60 bg-muted/20 p-2.5">
+          {canUpload && (
+            <div className="space-y-1">
+              <Label className="text-[11px]">Enviar arquivo (WAV, MP3, etc.)</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept={ACCEPT_AUDIO}
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={handleFileChange}
+                  />
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs pointer-events-none" asChild>
+                    <span>
+                      {uploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
+                      {uploading ? "Enviando..." : "Selecionar arquivo"}
+                    </span>
+                  </Button>
+                </label>
+                {hasFile && (
+                  <span className="text-[11px] text-muted-foreground truncate max-w-[160px]" title={deliverable?.file_name ?? undefined}>
+                    {deliverable?.file_name}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {canDownload && hasFile && (
+            <Button size="sm" variant="secondary" className="h-7 text-xs" onClick={handleDownload} disabled={downloading || !signedUrl}>
+              {downloading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Download className="h-3 w-3 mr-1" />}
+              {downloading ? "Preparando..." : "Baixar"}
+            </Button>
+          )}
+
+          <div className="space-y-1">
+            <Label className="text-[11px] flex items-center gap-1">
+              <MessageSquare className="h-3 w-3" /> Comentários
+            </Label>
+            <Textarea
+              placeholder="Comentários sobre o término..."
+              value={commentsDraft}
+              onChange={(e) => setCommentsDraft(e.target.value)}
+              className="min-h-[60px] text-xs"
+              disabled={savingComments}
+            />
+            <Button size="sm" className="h-7 text-xs" onClick={handleSaveComments} disabled={savingComments}>
+              {savingComments ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Salvar comentários
+            </Button>
           </div>
         </div>
-      )}
-
-      {canDownload && hasFile && (
-        <div>
-          <Button size="sm" variant="secondary" onClick={handleDownload} disabled={downloading || !signedUrl}>
-            {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-            {downloading ? "Preparando..." : "Baixar arquivo"}
-          </Button>
-        </div>
-      )}
-
-      <div className="space-y-1">
-        <Label className="text-xs flex items-center gap-1">
-          <MessageSquare className="h-3 w-3" /> Comentários
-        </Label>
-        <Textarea
-          placeholder="Comentários sobre o término..."
-          value={commentsDraft}
-          onChange={(e) => setCommentsDraft(e.target.value)}
-          className="min-h-[70px] text-sm"
-          disabled={savingComments}
-        />
-        <Button size="sm" onClick={handleSaveComments} disabled={savingComments}>
-          {savingComments ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
-          Salvar comentários
-        </Button>
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

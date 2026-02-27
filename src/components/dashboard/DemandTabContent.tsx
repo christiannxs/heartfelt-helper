@@ -37,6 +37,7 @@ export interface DemandTabContentProps {
   setEditingDemand: (d: DemandRow | null) => void;
   refetch: () => void;
   updateStatusMutation: UseMutationResult<void, Error, { id: string; status: "aguardando" | "em_producao" | "concluido" }, unknown>;
+  updatePhaseMutation: UseMutationResult<void, Error, { id: string; phase: "phase_producao" | "phase_gravacao" | "phase_mix_master"; checked: boolean }, unknown>;
   deleteDemandMutation: UseMutationResult<void, Error, string, unknown>;
   handleStatusCardClick: (status: string) => void;
   handleUpdateStatus: (id: string, newStatus: string) => Promise<void>;
@@ -69,6 +70,7 @@ export default function DemandTabContent({
   setEditingDemand,
   refetch,
   updateStatusMutation,
+  updatePhaseMutation,
   deleteDemandMutation,
   handleStatusCardClick,
   handleUpdateStatus,
@@ -175,6 +177,7 @@ export default function DemandTabContent({
               onEdit={setEditingDemand}
               onDelete={(id) => deleteDemandMutation.mutate(id)}
               updateStatusMutation={updateStatusMutation}
+              updatePhaseMutation={updatePhaseMutation}
               deleteDemandMutation={deleteDemandMutation}
             />
           </>
@@ -269,6 +272,7 @@ export default function DemandTabContent({
               onEdit={setEditingDemand}
               onDelete={(id) => deleteDemandMutation.mutate(id)}
               updateStatusMutation={updateStatusMutation}
+              updatePhaseMutation={updatePhaseMutation}
               deleteDemandMutation={deleteDemandMutation}
             />
           </TabsContent>

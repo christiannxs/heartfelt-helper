@@ -38,6 +38,9 @@ export type Database = {
           due_at: string | null
           id: string
           name: string
+          phase_gravacao: boolean
+          phase_mix_master: boolean
+          phase_producao: boolean
           producer_name: string
           solicitante_name: string | null
           start_at: string | null
@@ -52,6 +55,9 @@ export type Database = {
           due_at?: string | null
           id?: string
           name: string
+          phase_gravacao?: boolean
+          phase_mix_master?: boolean
+          phase_producao?: boolean
           producer_name: string
           solicitante_name?: string | null
           start_at?: string | null
@@ -66,6 +72,9 @@ export type Database = {
           due_at?: string | null
           id?: string
           name?: string
+          phase_gravacao?: boolean
+          phase_mix_master?: boolean
+          phase_producao?: boolean
           producer_name?: string
           solicitante_name?: string | null
           start_at?: string | null
