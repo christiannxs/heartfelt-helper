@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import CreateDemandDialog from "@/components/CreateDemandDialog";
-import { Filter } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 
 const PERIOD_OPTIONS = [
   { value: "all", label: "Todos os períodos" },
@@ -20,6 +21,8 @@ interface DemandFiltersProps {
   showFilters: boolean;
   showCreateButton: boolean;
   onCreated: () => void;
+  /** Quando informado, o botão "Nova Demanda" chama este callback em vez de renderizar o dialog (dialog controlado pelo pai). */
+  onOpenCreateDialog?: (initialDueDate?: Date | null) => void;
 }
 
 export default function DemandFilters({
@@ -33,6 +36,7 @@ export default function DemandFilters({
   showFilters,
   showCreateButton,
   onCreated,
+  onOpenCreateDialog,
 }: DemandFiltersProps) {
   return (
     <div className="rounded-xl border border-border bg-card/50 p-4 sm:p-5">
@@ -80,7 +84,13 @@ export default function DemandFilters({
           )}
           {showCreateButton && (
             <div className="w-full sm:w-auto sm:ml-2">
-              <CreateDemandDialog onCreated={onCreated} />
+              {onOpenCreateDialog ? (
+                <Button onClick={() => onOpenCreateDialog()}>
+                  <Plus className="h-4 w-4 mr-2" /> Nova Demanda
+                </Button>
+              ) : (
+                <CreateDemandDialog onCreated={onCreated} />
+              )}
             </div>
           )}
         </div>

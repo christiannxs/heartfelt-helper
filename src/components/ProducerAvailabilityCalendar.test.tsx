@@ -34,7 +34,7 @@ vi.mock("sonner", () => ({
 describe("ProducerAvailabilityCalendar", () => {
   it("renders title and description", () => {
     render(<ProducerAvailabilityCalendar userId="user-1" />);
-    expect(screen.getByText("Meu calendário de entregas")).toBeInTheDocument();
-    expect(screen.getByText(/Cada demanda com prazo de entrega marcado ocupa automaticamente o dia correspondente/)).toBeInTheDocument();
+    expect(screen.getByText("Meu calendário de términos")).toBeInTheDocument();
+    expect(screen.getByText(/Cada demanda com término marcado ocupa automaticamente o dia correspondente/)).toBeInTheDocument();
   });
 });

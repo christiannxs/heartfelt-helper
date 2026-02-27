@@ -41,6 +41,7 @@ export interface DemandTabContentProps {
   handleStatusCardClick: (status: string) => void;
   handleUpdateStatus: (id: string, newStatus: string) => Promise<void>;
   roleLabel: string;
+  onOpenCreateDialog?: (initialDueDate?: Date | null) => void;
 }
 
 export default function DemandTabContent({
@@ -72,10 +73,15 @@ export default function DemandTabContent({
   handleStatusCardClick,
   handleUpdateStatus,
   roleLabel,
+  onOpenCreateDialog,
 }: DemandTabContentProps) {
   const availabilitySection =
     role === "produtor" && userId ? (
-      <ProducerAvailabilityCalendar userId={userId} />
+      <ProducerAvailabilityCalendar
+        userId={userId}
+        onEditDemand={setEditingDemand}
+        onAddDemandWithDate={onOpenCreateDialog ? (date) => onOpenCreateDialog(date) : undefined}
+      />
     ) : role === "ceo" || role === "atendente" || role === "admin" ? (
       <ProducerAvailabilityView />
     ) : null;
@@ -103,7 +109,7 @@ export default function DemandTabContent({
         >
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <span>
-            {dueSoonCount} {dueSoonCount === 1 ? "demanda com prazo" : "demandas com prazo"} nos próximos 2 dias.
+            {dueSoonCount} {dueSoonCount === 1 ? "demanda com término" : "demandas com término"} nos próximos 2 dias.
           </span>
         </div>
       )}
@@ -129,6 +135,7 @@ export default function DemandTabContent({
           showFilters={canEditOrDelete}
           showCreateButton={role === "atendente" || role === "admin" || role === "ceo" || role === "produtor"}
           onCreated={refetch}
+          onOpenCreateDialog={onOpenCreateDialog}
         />
       </section>
 

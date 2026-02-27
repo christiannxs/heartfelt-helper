@@ -191,7 +191,7 @@ export default function DemandDeliverySection({
           <MessageSquare className="h-3 w-3" /> Comentários
         </Label>
         <Textarea
-          placeholder="Comentários sobre a entrega..."
+          placeholder="Comentários sobre o término..."
           value={commentsDraft}
           onChange={(e) => setCommentsDraft(e.target.value)}
           className="min-h-[70px] text-sm"

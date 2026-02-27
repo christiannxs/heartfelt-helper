@@ -40,6 +40,7 @@ export type Database = {
           name: string
           producer_name: string
           solicitante_name: string | null
+          start_at: string | null
           status: Database["public"]["Enums"]["demand_status"]
           updated_at: string
         }
@@ -53,6 +54,7 @@ export type Database = {
           name: string
           producer_name: string
           solicitante_name?: string | null
+          start_at?: string | null
           status?: Database["public"]["Enums"]["demand_status"]
           updated_at?: string
         }
@@ -66,6 +68,7 @@ export type Database = {
           name?: string
           producer_name?: string
           solicitante_name?: string | null
+          start_at?: string | null
           status?: Database["public"]["Enums"]["demand_status"]
           updated_at?: string
         }

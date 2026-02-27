@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DemandDateRangeCalendar } from "@/components/DemandDateRangeCalendar";
 import {
   Form,
   FormControl,
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProducers } from "@/hooks/useProducers";
@@ -28,20 +31,37 @@ const createDemandSchema = z.object({
   artist: z.string().optional().or(z.literal("")),
   name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
   description: z.string().max(2000).optional().or(z.literal("")),
-  dueAt: z.string().min(1, "Prazo de entrega é obrigatório"),
+  startDate: z.string().min(1, "Data de início é obrigatória"),
+  startTime: z.string().min(1, "Horário de início é obrigatório"),
+  dueDate: z.string().min(1, "Data de término é obrigatória"),
+  dueTime: z.string().min(1, "Horário de término é obrigatório"),
   producer: z.string().min(1, "Selecione um produtor"),
-});
+}).refine(
+  (data) => {
+    const start = new Date(`${data.startDate}T${data.startTime}`);
+    const due = new Date(`${data.dueDate}T${data.dueTime}`);
+    return start <= due;
+  },
+  { message: "A data/hora de início deve ser anterior à data/hora de término.", path: ["dueDate"] }
+);
 
 type CreateDemandForm = z.infer<typeof createDemandSchema>;
 
 interface Props {
   onCreated: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialDueDate?: Date | null;
 }
 
-export default function CreateDemandDialog({ onCreated }: Props) {
+export default function CreateDemandDialog({ onCreated, open: controlledOpen, onOpenChange: controlledOnOpenChange, initialDueDate }: Props) {
   const { user, role, displayName } = useAuth();
   const { data: producers = [] } = useProducers(role);
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isControlled = controlledOpen !== undefined && controlledOnOpenChange !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen;
 
   const isProducer = role === "produtor";
   const producerOptions = isProducer && displayName ? [displayName] : producers;
@@ -53,7 +73,10 @@ export default function CreateDemandDialog({ onCreated }: Props) {
       artist: "",
       name: "",
       description: "",
-      dueAt: "",
+      startDate: "",
+      startTime: "",
+      dueDate: "",
+      dueTime: "",
       producer: "",
     },
   });
@@ -64,33 +87,46 @@ export default function CreateDemandDialog({ onCreated }: Props) {
     }
   }, [open, isProducer, displayName, form]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (initialDueDate) {
+      const dueDateStr = format(initialDueDate, "yyyy-MM-dd");
+      form.setValue("dueDate", dueDateStr);
+      form.setValue("dueTime", "18:00");
+      const today = format(new Date(), "yyyy-MM-dd");
+      const startDateStr = today <= dueDateStr ? today : dueDateStr;
+      form.setValue("startDate", startDateStr);
+      form.setValue("startTime", "09:00");
+    }
+  }, [open, initialDueDate, form]);
+
   const onSubmit = async (values: CreateDemandForm) => {
     if (!user) return;
     try {
       const trimmedProducer = values.producer.trim();
-      const trimmedDueAt = values.dueAt?.trim() || "";
+      const dueDateTime = new Date(`${values.dueDate}T${values.dueTime}`);
 
-      if (trimmedDueAt) {
-        const dueDate = new Date(trimmedDueAt);
-        const startOfDay = new Date(dueDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(dueDate);
-        endOfDay.setHours(23, 59, 59, 999);
+      const startOfDay = new Date(values.dueDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(values.dueDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
-        const { data: existingDemands, error: conflictError } = await supabase
-          .from("demands")
-          .select("id, name, due_at")
-          .eq("producer_name", trimmedProducer)
-          .gte("due_at", startOfDay.toISOString())
-          .lte("due_at", endOfDay.toISOString());
+      const { data: existingDemands, error: conflictError } = await supabase
+        .from("demands")
+        .select("id, name, due_at")
+        .eq("producer_name", trimmedProducer)
+        .gte("due_at", startOfDay.toISOString())
+        .lte("due_at", endOfDay.toISOString());
 
-        if (conflictError) throw conflictError;
+      if (conflictError) throw conflictError;
 
-        if (existingDemands && existingDemands.length > 0) {
-          toast.error("Este produtor já tem uma demanda com entrega marcada para esse dia. Escolha outra data.");
-          return;
-        }
+      if (existingDemands && existingDemands.length > 0) {
+        toast.error("Este produtor já tem uma demanda com término marcado para esse dia. Escolha outra data.");
+        return;
       }
+
+      const startAtISO = new Date(`${values.startDate}T${values.startTime}`).toISOString();
+      const dueAtISO = dueDateTime.toISOString();
 
       const { error } = await supabase.from("demands").insert({
         artist_name: values.artist?.trim() || null,
@@ -99,7 +135,8 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         producer_name: trimmedProducer,
         solicitante_name: displayName?.trim() || null,
         created_by: user.id,
-        due_at: values.dueAt ? new Date(values.dueAt).toISOString() : null,
+        start_at: startAtISO,
+        due_at: dueAtISO,
       });
       if (error) throw error;
       toast.success("Demanda criada com sucesso!");
@@ -107,7 +144,10 @@ export default function CreateDemandDialog({ onCreated }: Props) {
         artist: "",
         name: "",
         description: "",
-        dueAt: "",
+        startDate: "",
+        startTime: "",
+        dueDate: "",
+        dueTime: "",
         producer: isProducer && displayName ? displayName : "",
       });
       setOpen(false);
@@ -119,17 +159,20 @@ export default function CreateDemandDialog({ onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" /> Nova Demanda
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" /> Nova Demanda
+          </Button>
+        </DialogTrigger>
+      )}
+      <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden gap-0 p-0">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-2">
           <DialogTitle>Criar Nova Demanda</DialogTitle>
         </DialogHeader>
+        <div className="overflow-y-auto flex-1 min-h-0 px-6 pb-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-1">
             <FormField
               control={form.control}
               name="artist"
@@ -181,24 +224,79 @@ export default function CreateDemandDialog({ onCreated }: Props) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="dueAt"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prazo de entrega</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="datetime-local"
-                      required
-                      {...field}
-                      min={new Date().toISOString().slice(0, 16)}
+            <Card className="border-muted bg-muted/30">
+              <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-sm font-medium">Datas e horários</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 space-y-4">
+                <div className="space-y-2">
+                  <FormLabel>Início</FormLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground font-normal">Data</FormLabel>
+                          <FormControl>
+                            <Input type="date" required {...field} min={new Date().toISOString().slice(0, 10)} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormField
+                      control={form.control}
+                      name="startTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground font-normal">Horário</FormLabel>
+                          <FormControl>
+                            <Input type="time" required {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <FormLabel>Término</FormLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground font-normal">Data</FormLabel>
+                          <FormControl>
+                            <Input type="date" required {...field} min={new Date().toISOString().slice(0, 10)} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dueTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground font-normal">Horário</FormLabel>
+                          <FormControl>
+                            <Input type="time" required {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                <DemandDateRangeCalendar
+                  startDate={form.watch("startDate")}
+                  dueDate={form.watch("dueDate")}
+                />
+              </CardContent>
+            </Card>
             <FormField
               control={form.control}
               name="producer"
@@ -237,6 +335,7 @@ export default function CreateDemandDialog({ onCreated }: Props) {
             </Button>
           </form>
         </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

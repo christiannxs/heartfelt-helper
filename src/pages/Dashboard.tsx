@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProducers } from "@/hooks/useProducers";
 import { useDemands } from "@/hooks/useDemands";
 import EditDemandDialog from "@/components/EditDemandDialog";
+import CreateDemandDialog from "@/components/CreateDemandDialog";
 import DemandTabContent from "@/components/dashboard/DemandTabContent";
 import { handleApiError } from "@/lib/errors";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ export default function Dashboard() {
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingDemand, setEditingDemand] = useState<DemandRow | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createInitialDueDate, setCreateInitialDueDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterProducer, setFilterProducer] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
@@ -64,11 +67,7 @@ export default function Dashboard() {
 
   const periodStart = getPeriodStart(dateFilter);
   const filtered = demands.filter((d) => {
-    if (filterStatus === "all") {
-      if (d.status === "concluido") return false;
-    } else if (d.status !== filterStatus) {
-      return false;
-    }
+    if (filterStatus !== "all" && d.status !== filterStatus) return false;
     if (filterProducer !== "all" && d.producer_name !== filterProducer) return false;
     if (periodStart && new Date(d.created_at) < periodStart) return false;
     return true;
@@ -90,6 +89,11 @@ export default function Dashboard() {
 
   const handleStatusCardClick = (status: string) => {
     setFilterStatus((prev) => (prev === status ? "all" : status));
+  };
+
+  const openCreateDialog = (initialDueDate?: Date | null) => {
+    setCreateInitialDueDate(initialDueDate ?? null);
+    setCreateDialogOpen(true);
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
@@ -138,6 +142,16 @@ export default function Dashboard() {
         handleStatusCardClick={handleStatusCardClick}
         handleUpdateStatus={handleUpdateStatus}
         roleLabel={roleLabel}
+        onOpenCreateDialog={openCreateDialog}
+      />
+      <CreateDemandDialog
+        open={createDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) setCreateInitialDueDate(null);
+        }}
+        initialDueDate={createInitialDueDate}
+        onCreated={() => { refetch(); setCreateDialogOpen(false); setCreateInitialDueDate(null); }}
       />
       <EditDemandDialog
         demand={editingDemand}

@@ -61,7 +61,7 @@ export default function ProducerAvailabilityView() {
           Agenda dos produtores
         </CardTitle>
         <CardDescription>
-          Veja em quais dias cada produtor já tem entregas agendadas para evitar conflitos ao criar novas demandas.
+          Veja em quais dias cada produtor já tem términos agendados para evitar conflitos ao criar novas demandas.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
