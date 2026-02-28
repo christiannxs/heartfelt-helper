@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
@@ -67,6 +76,10 @@ export default function CreateDemandDialog({ onCreated, open: controlledOpen, on
   const producerOptions = isProducer && displayName ? [displayName] : producers;
   const producerDisabled = isProducer;
 
+  const [confirmAddOpen, setConfirmAddOpen] = useState(false);
+  const [pendingSubmitValues, setPendingSubmitValues] = useState<CreateDemandForm | null>(null);
+  const [isSubmittingAfterConfirm, setIsSubmittingAfterConfirm] = useState(false);
+
   const form = useForm<CreateDemandForm>({
     resolver: zodResolver(createDemandSchema),
     defaultValues: {
@@ -100,64 +113,86 @@ export default function CreateDemandDialog({ onCreated, open: controlledOpen, on
     }
   }, [open, initialDueDate, form]);
 
+  const doInsertDemand = async (values: CreateDemandForm) => {
+    if (!user) return;
+    const trimmedProducer = values.producer.trim();
+    const dueDateTime = new Date(`${values.dueDate}T${values.dueTime}`);
+    const startAtISO = new Date(`${values.startDate}T${values.startTime}`).toISOString();
+    const dueAtISO = dueDateTime.toISOString();
+
+    const { error } = await supabase.from("demands").insert({
+      artist_name: values.artist?.trim() || null,
+      name: values.name.trim(),
+      description: values.description?.trim() || null,
+      producer_name: trimmedProducer,
+      solicitante_name: displayName?.trim() || null,
+      created_by: user.id,
+      start_at: startAtISO,
+      due_at: dueAtISO,
+    });
+    if (error) throw error;
+    toast.success("Demanda criada com sucesso!");
+    form.reset({
+      artist: "",
+      name: "",
+      description: "",
+      startDate: "",
+      startTime: "",
+      dueDate: "",
+      dueTime: "",
+      producer: isProducer && displayName ? displayName : "",
+    });
+    setOpen(false);
+    setConfirmAddOpen(false);
+    setPendingSubmitValues(null);
+    onCreated();
+  };
+
   const onSubmit = async (values: CreateDemandForm) => {
     if (!user) return;
     try {
       const trimmedProducer = values.producer.trim();
-      const dueDateTime = new Date(`${values.dueDate}T${values.dueTime}`);
 
-      const startOfDay = new Date(values.dueDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(values.dueDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      const dayStart = new Date(values.dueDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(values.dueDate);
+      dayEnd.setHours(23, 59, 59, 999);
 
       const { data: existingDemands, error: conflictError } = await supabase
         .from("demands")
         .select("id, name, due_at")
         .eq("producer_name", trimmedProducer)
-        .gte("due_at", startOfDay.toISOString())
-        .lte("due_at", endOfDay.toISOString());
+        .gte("due_at", dayStart.toISOString())
+        .lte("due_at", dayEnd.toISOString());
 
       if (conflictError) throw conflictError;
 
       if (existingDemands && existingDemands.length > 0) {
-        toast.error("Este produtor já tem uma demanda com término marcado para esse dia. Escolha outra data.");
+        setPendingSubmitValues(values);
+        setConfirmAddOpen(true);
         return;
       }
 
-      const startAtISO = new Date(`${values.startDate}T${values.startTime}`).toISOString();
-      const dueAtISO = dueDateTime.toISOString();
-
-      const { error } = await supabase.from("demands").insert({
-        artist_name: values.artist?.trim() || null,
-        name: values.name.trim(),
-        description: values.description?.trim() || null,
-        producer_name: trimmedProducer,
-        solicitante_name: displayName?.trim() || null,
-        created_by: user.id,
-        start_at: startAtISO,
-        due_at: dueAtISO,
-      });
-      if (error) throw error;
-      toast.success("Demanda criada com sucesso!");
-      form.reset({
-        artist: "",
-        name: "",
-        description: "",
-        startDate: "",
-        startTime: "",
-        dueDate: "",
-        dueTime: "",
-        producer: isProducer && displayName ? displayName : "",
-      });
-      setOpen(false);
-      onCreated();
+      await doInsertDemand(values);
     } catch (err: unknown) {
       handleApiError(err, "Erro ao criar demanda.");
     }
   };
 
+  const handleConfirmAddDespiteConflict = async () => {
+    if (!pendingSubmitValues) return;
+    setIsSubmittingAfterConfirm(true);
+    try {
+      await doInsertDemand(pendingSubmitValues);
+    } catch (err: unknown) {
+      handleApiError(err, "Erro ao criar demanda.");
+    } finally {
+      setIsSubmittingAfterConfirm(false);
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       {!isControlled && (
         <DialogTrigger asChild>
@@ -338,5 +373,26 @@ export default function CreateDemandDialog({ onCreated, open: controlledOpen, on
         </div>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={confirmAddOpen} onOpenChange={(open) => { setConfirmAddOpen(open); if (!open) setPendingSubmitValues(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Já existe demanda neste dia</AlertDialogTitle>
+          <AlertDialogDescription>
+            Este produtor já tem {pendingSubmitValues ? "demanda(s)" : "uma demanda"} com término marcado para esse dia.
+            Deseja adicionar outra demanda mesmo assim?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isSubmittingAfterConfirm}>Não</AlertDialogCancel>
+          <Button
+            onClick={handleConfirmAddDespiteConflict}
+            disabled={isSubmittingAfterConfirm}
+          >
+            {isSubmittingAfterConfirm ? "Adicionando..." : "Sim, tenho certeza"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }
